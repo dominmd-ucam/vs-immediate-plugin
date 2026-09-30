@@ -84,6 +84,18 @@ Opciones comunes: `-Solution <texto de la ruta>` o `-ProcessId <pid>` para elegi
 5. Razona con lo obtenido antes de pedir el siguiente dato. Pide pocos datos por llamada y con expresiones concretas.
 6. Para investigaciones largas de varios ciclos, usa la skill `vs-diagnose` o delega en el agente `vs-debugger`.
 
+## Mostrar lo que se ha consultado
+
+Tras cada consulta que evalue expresiones (`vs-eval`, `vs-types`, `vs-elsa`, `vs-trace`, `vs-watch`), muestra al usuario, ademas del resultado, lo que se ha evaluado, en un bloque de codigo listo para pegar en la Ventana Inmediato de Visual Studio:
+
+- Una linea por expresion, con el prefijo `?` para las que devuelven un valor (`? clientes.Count`) y sin prefijo para las sentencias (`sinEmail.Add(x)`).
+- La expresion exacta que se envio al depurador, no una version resumida. Si se adapto (por ejemplo se quito un `;` o se cambio el separador `,,` por lineas separadas), muestra la version adaptada, que es la que funciona en la ventana.
+- Indica el contexto en el que se evaluo: funcion del frame actual y hilo, porque la Ventana Inmediato evalua en el frame seleccionado.
+- Con `vs-elsa` y `vs-types` muestra las expresiones principales que se evaluaron (por ejemplo `? context.WorkflowExecutionContext.Id`), no la lista completa de sondeo.
+- Con `vs-state` (locales, pila, hilos) no hace falta: no son expresiones.
+
+Si la expresion modifica estado, dilo antes de mostrarla.
+
 ## Reglas de seguridad
 
 - Evaluar una expresion puede ejecutar codigo de la aplicacion (llamar a metodos, getters con efectos, asignaciones). Prefiere expresiones de solo lectura. No modifiques estado ni llames a metodos con efectos laterales (escrituras, envios, borrados) sin que el usuario lo haya pedido.
