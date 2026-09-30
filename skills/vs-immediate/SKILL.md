@@ -59,6 +59,7 @@ Modifican algo (piden permiso salvo que el usuario ya lo haya pedido):
 | Script | Para que |
 | --- | --- |
 | `vs-eval.ps1 -Expression "<sentencia>" -Execute` | Ejecuta una asignacion o llamada void como expresion con efectos y comprueba el resultado (falla con error si el depurador la rechaza). No admite declaraciones (`int x = 1`) ni variables del depurador (`$x`), que no persisten entre llamadas. Cambia el estado de la aplicacion. |
+| `vs-trace.ps1 -Expression "<expr>" -Functions "Ns.Clase.Metodo,,Ns.Clase.Prop.get"` | Rastro de una evaluacion (experimental): pone breakpoints que solo cuentan, evalua la expresion, dice que funciones vigiladas se ejecutaron y cuantas veces, y los borra. Elige las funciones candidatas leyendo el codigo (getters, metodos que la expresion puede llamar). Ejecuta codigo de la app y toca breakpoints temporalmente: pide confirmacion. |
 | `vs-threads.ps1 -Action Switch -ThreadId n` | Cambia el hilo actual del depurador. |
 | `vs-exceptions.ps1 -Action Break\|NoBreak -Type <T>` | Activa o desactiva "parar al lanzarse" para un tipo de excepcion (experimental). |
 | `vs-watch.ps1 -Expressions "a,,b" -Iterations 5` | Instantaneas de varias expresiones a lo largo de varias pausas (continua la ejecucion). |

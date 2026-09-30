@@ -49,6 +49,7 @@ simples). Todo lo que cambia algo sigue pidiendo permiso. Detalles y limites en
         vs-common.ps1                  conexion a VS, reintentos, utilidades
         vs-list.ps1                    lista instancias de VS
         vs-eval.ps1                    evalua expresiones
+        vs-trace.ps1                   rastro de una evaluacion: que funciones se ejecutan (experimental)
         vs-state.ps1                   estado, locales, pila, breakpoints, Output, Errores, Procesos
         vs-types.ps1                   tipo declarado y tipo real
         vs-exceptions.ps1              ultima excepcion y configuracion de excepciones
