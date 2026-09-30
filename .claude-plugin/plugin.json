@@ -1,0 +1,9 @@
+{
+  "name": "vs-immediate",
+  "version": "0.1.0",
+  "description": "Permite a Claude Code evaluar expresiones y controlar el depurador de Visual Studio (2022/2026) desde la terminal, como si usara la Ventana Inmediato.",
+  "author": {
+    "name": "Domingo"
+  },
+  "keywords": ["visual-studio", "debugger", "immediate-window", "dotnet", "windows"]
+}

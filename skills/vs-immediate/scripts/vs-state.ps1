@@ -1,0 +1,112 @@
+# vs-state.ps1 - Consulta el estado del depurador de Visual Studio (solo lectura).
+#   -What Status       modo del depurador, solucion, proceso, frame actual
+#   -What Locals       variables locales y argumentos del frame actual (break mode)
+#   -What Stack        pila de llamadas del hilo actual (break mode)
+#   -What Breakpoints  breakpoints definidos
+#   -What Output       ultimas lineas de un panel de la ventana Output (por defecto "Debug")
+param(
+    [ValidateSet('Status', 'Locals', 'Stack', 'Breakpoints', 'Output')]
+    [string]$What = 'Status',
+    [int]$Top = 30,        # maximo de elementos para Locals / Stack / Breakpoints
+    [int]$Tail = 50,       # lineas finales para Output
+    [string]$Pane = 'Debug',
+    [string]$Solution,
+    [int]$ProcessId = 0
+)
+
+. "$PSScriptRoot\vs-common.ps1"
+
+function ConvertTo-ExprItems {
+    param($Collection, [int]$Max)
+    $items = @()
+    $n = 0
+    foreach ($e in $Collection) {
+        $n++
+        if ($n -gt $Max) { break }
+        $items += [pscustomobject]@{ name = [string]$e.Name; type = [string]$e.Type; value = Limit-Text ([string]$e.Value) 500 }
+    }
+    return $items
+}
+
+Invoke-Main {
+    $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
+    $dbg = $vs.Dte.Debugger
+    $mode = [int](Invoke-Com { $dbg.CurrentMode })
+
+    switch ($What) {
+        'Status' {
+            $res = [ordered]@{
+                ok           = $true
+                solution     = $vs.Solution
+                processId    = $vs.ProcessId
+                debuggerMode = Get-ModeName $mode
+            }
+            if ($mode -ne 1) {
+                $proc = Try-Get { $dbg.CurrentProcess }
+                if ($proc) { $res.debuggee = [pscustomobject]@{ name = [string]$proc.Name; processId = [int]$proc.ProcessID } }
+            }
+            if ($mode -eq 2) {
+                $frame = Try-Get { $dbg.CurrentStackFrame }
+                if ($frame) {
+                    $res.frame = [pscustomobject]@{ function = [string]$frame.FunctionName; module = [string]$frame.Module; language = [string]$frame.Language }
+                }
+                $doc = Try-Get { $vs.Dte.ActiveDocument }
+                if ($doc) {
+                    # Aproximado: el documento activo suele ser el codigo fuente en la linea actual.
+                    $res.sourcePosition = [pscustomobject]@{ file = [string]$doc.FullName; line = [int]$doc.Selection.CurrentLine }
+                }
+            }
+            Write-Json ([pscustomobject]$res)
+        }
+        'Locals' {
+            Assert-BreakMode $vs
+            $frame = Invoke-Com { $dbg.CurrentStackFrame }
+            $locals = ConvertTo-ExprItems $frame.Locals $Top
+            $frameArgs = ConvertTo-ExprItems $frame.Arguments $Top
+            Write-Json ([pscustomobject]@{ ok = $true; function = [string]$frame.FunctionName; arguments = $frameArgs; locals = $locals })
+        }
+        'Stack' {
+            Assert-BreakMode $vs
+            $thread = Invoke-Com { $dbg.CurrentThread }
+            $frames = @()
+            $n = 0
+            foreach ($f in $thread.StackFrames) {
+                $n++
+                if ($n -gt $Top) { break }
+                $frames += [pscustomobject]@{ index = $n; function = [string]$f.FunctionName; module = [string]$f.Module; language = [string]$f.Language }
+            }
+            Write-Json ([pscustomobject]@{ ok = $true; threadId = [int]$thread.ID; frames = $frames })
+        }
+        'Breakpoints' {
+            $items = @()
+            $n = 0
+            foreach ($b in $dbg.Breakpoints) {
+                $n++
+                if ($n -gt $Top) { break }
+                $items += [pscustomobject]@{
+                    file      = [string]$b.File
+                    line      = [int]$b.FileLine
+                    enabled   = [bool]$b.Enabled
+                    condition = [string]$b.Condition
+                    function  = [string]$b.FunctionName
+                }
+            }
+            Write-Json ([pscustomobject]@{ ok = $true; count = $items.Count; breakpoints = $items })
+        }
+        'Output' {
+            $panes = $vs.Dte.ToolWindows.OutputWindow.OutputWindowPanes
+            $p = $null
+            $names = @()
+            foreach ($x in $panes) {
+                $names += [string]$x.Name
+                if ($x.Name -eq $Pane) { $p = $x }
+            }
+            if (-not $p) { throw ("No existe el panel '$Pane'. Paneles disponibles: " + ($names -join ', ')) }
+            $doc = $p.TextDocument
+            $text = $doc.StartPoint.CreateEditPoint().GetText($doc.EndPoint)
+            $lines = @($text -split "\r?\n")
+            if ($lines.Count -gt $Tail) { $lines = $lines[($lines.Count - $Tail)..($lines.Count - 1)] }
+            Write-Json ([pscustomobject]@{ ok = $true; pane = $Pane; lines = $lines })
+        }
+    }
+}
