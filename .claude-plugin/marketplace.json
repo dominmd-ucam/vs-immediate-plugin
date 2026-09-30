@@ -8,7 +8,7 @@
       "name": "vs-immediate",
       "source": "./",
       "description": "Evalua expresiones y controla el depurador de Visual Studio desde Claude Code (Windows).",
-      "version": "0.2.3"
+      "version": "0.2.4"
     }
   ]
 }

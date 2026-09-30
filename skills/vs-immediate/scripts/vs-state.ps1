@@ -107,10 +107,11 @@ Invoke-Main {
             if (-not $p) {
                 # Los paneles integrados a veces no aparecen al enumerar: se prueba por nombre y por GUID (independiente del idioma).
                 $guids = @{ 'debug' = '{FC076020-078A-11D1-A7DF-00A0C9110051}'; 'depurar' = '{FC076020-078A-11D1-A7DF-00A0C9110051}'; 'depuracion' = '{FC076020-078A-11D1-A7DF-00A0C9110051}'; 'build' = '{1BD8A850-02D1-11D1-BEE7-00A0C913D1F8}'; 'compilar' = '{1BD8A850-02D1-11D1-BEE7-00A0C913D1F8}' }
-                $p = Try-Get { $panes.Item($Pane) }
+                if ($Pane -eq 'Active') { $p = Try-Get { $vs.Dte.ToolWindows.OutputWindow.ActivePane } }
+                if (-not $p) { $p = Try-Get { $panes.Item($Pane) } }
                 if (-not $p -and $guids.ContainsKey($Pane.ToLower())) { $p = Try-Get { $panes.Item($guids[$Pane.ToLower()]) } }
             }
-            if (-not $p) { throw ("No se pudo abrir el panel '$Pane'. Paneles enumerados: [" + ($names -join ', ') + "]. En algunas versiones de VS el panel de depuracion no es accesible por DTE; mira la ventana Output de VS.") }
+            if (-not $p) { throw ("No se pudo abrir el panel '$Pane'. Paneles enumerados: [" + ($names -join ', ') + "]. En VS 2026 la coleccion OutputWindowPanes de DTE puede venir vacia (limite de VS, no del plugin); prueba -Pane Active o mira la ventana Output de VS.") }
             $doc = $p.TextDocument
             $text = $doc.StartPoint.CreateEditPoint().GetText($doc.EndPoint)
             $lines = @($text -split "\r?\n")

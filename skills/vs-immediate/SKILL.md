@@ -44,7 +44,7 @@ Solo lectura (el plugin las aprueba automaticamente si se llaman de forma simple
 | `vs-state.ps1 -What Locals` | Locales y argumentos del frame actual. |
 | `vs-state.ps1 -What Stack -Top 20` | Pila de llamadas. |
 | `vs-state.ps1 -What Breakpoints` | Breakpoints definidos. |
-| `vs-state.ps1 -What Output -Pane Debug -Tail 50` | Ultimas lineas de la ventana Output. |
+| `vs-state.ps1 -What Output -Pane Debug -Tail 50` | Ultimas lineas de la ventana Output. En VS 2026 DTE puede devolver cero paneles (limite de VS, verificado): entonces falla con un mensaje claro; prueba `-Pane Active` o pide al usuario que mire la ventana Output. No lo intentes por otras vias. |
 | `vs-state.ps1 -What Errors [-Level Error\|Warning\|All]` | Lista de errores de VS (ultimo build/analisis). |
 | `vs-state.ps1 -What Processes -Filter <texto>` | Procesos locales a los que se puede enganchar el depurador. |
 | `vs-eval.ps1 -Expression "<expr>"` | Evalua una expresion. `-Members` lista sus miembros; `-Depth 2` o `3` explora en profundidad; `-Private` incluye miembros no publicos. |
