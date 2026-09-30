@@ -160,3 +160,63 @@ function Limit-Text {
     if ($Text -and $Text.Length -gt $Max) { return $Text.Substring(0, $Max) + '...[truncado]' }
     return $Text
 }
+
+# --- Esperas y resumen tras acciones de control -------------------------------------------------
+# Espera a que el modo deje de ser "run". Devuelve el modo final (3 = sigue ejecutando).
+function Wait-NotRunning {
+    param($Dbg, [int]$Seconds)
+    Start-Sleep -Milliseconds 700
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
+        $m = [int](Invoke-Com { $Dbg.CurrentMode })
+        if ($m -ne 3) { return $m }
+        Start-Sleep -Milliseconds 300
+    }
+    return 3
+}
+
+function Wait-Mode {
+    param($Dbg, [int]$Target, [int]$Seconds)
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
+        $m = [int](Invoke-Com { $Dbg.CurrentMode })
+        if ($m -eq $Target) { return $m }
+        Start-Sleep -Milliseconds 300
+    }
+    return [int](Invoke-Com { $Dbg.CurrentMode })
+}
+
+function Get-Brief {
+    param($Vs, [string]$Action, [bool]$TimedOut = $false)
+    $dbg = $Vs.Dte.Debugger
+    $mode = [int](Invoke-Com { $dbg.CurrentMode })
+    $res = [ordered]@{ ok = $true; action = $Action; debuggerMode = Get-ModeName $mode }
+    if ($TimedOut) { $res.note = 'La ejecucion sigue en marcha (no ha vuelto a pausa dentro del tiempo de espera).' }
+    if ($mode -eq 2) {
+        $frame = Try-Get { $dbg.CurrentStackFrame }
+        if ($frame) { $res.function = [string]$frame.FunctionName }
+        $doc = Try-Get { $Vs.Dte.ActiveDocument }
+        if ($doc) { $res.sourcePosition = [pscustomobject]@{ file = [string]$doc.FullName; line = [int]$doc.Selection.CurrentLine } }
+    }
+    return [pscustomobject]$res
+}
+
+# --- Evaluacion de expresiones ------------------------------------------------------------------
+# Devuelve el valor (texto) de una expresion, o $null si no es valida en este contexto.
+function Eval-Value {
+    param($Dbg, [string]$Expr, [int]$TimeoutMs = 3000)
+    try {
+        $r = Invoke-Com { $Dbg.GetExpression($Expr, $false, $TimeoutMs) }
+        if ($r.IsValidValue) { return [string]$r.Value }
+    } catch {}
+    return $null
+}
+
+# Quita las comillas externas de un valor de tipo string tal como lo devuelve el depurador.
+function Unquote-Text {
+    param([string]$Text)
+    if ($null -eq $Text) { return $null }
+    $t = $Text.Trim()
+    if ($t.Length -ge 2 -and $t.StartsWith('"') -and $t.EndsWith('"')) { $t = $t.Substring(1, $t.Length - 2) }
+    return $t
+}

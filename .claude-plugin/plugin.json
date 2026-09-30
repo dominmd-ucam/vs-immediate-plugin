@@ -1,7 +1,7 @@
 {
   "name": "vs-immediate",
-  "version": "0.1.0",
-  "description": "Permite a Claude Code evaluar expresiones y controlar el depurador de Visual Studio (2022/2026) desde la terminal, como si usara la Ventana Inmediato.",
+  "version": "0.2.0",
+  "description": "Permite a Claude Code evaluar expresiones y controlar el depurador de Visual Studio (2022/2026) desde la terminal, como si usara la Ventana Inmediato. Incluye skills de diagnostico, Elsa e inspeccion de interfaces, comandos rapidos y un agente depurador.",
   "author": {
     "name": "Domingo"
   },

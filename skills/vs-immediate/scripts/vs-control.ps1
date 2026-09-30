@@ -8,15 +8,23 @@
 #   AddBreakpoint     -File <ruta o nombre> -Line <n> [-Condition <expr>]
 #   RemoveBreakpoint  -File <ruta o nombre> -Line <n>
 #   ClearBreakpoints  elimina todos los breakpoints
+#   AddTracepoint     -File <ruta o nombre> -Line <n> -Message "texto {expr}" [-Condition <expr>]
+#                     (breakpoint que escribe un mensaje en la ventana Output y NO para la ejecucion)
+#   Attach            -TargetName <texto> | -TargetPid <n>   se engancha a un proceso ya en marcha
+#   Detach            se desengancha de todos los procesos sin cerrarlos
 #   Command           -Command <Nombre.Comando.De.VS>  (DTE.ExecuteCommand)
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('Build', 'Start', 'Continue', 'StepOver', 'StepInto', 'StepOut', 'Pause', 'Stop',
-                 'AddBreakpoint', 'RemoveBreakpoint', 'ClearBreakpoints', 'Command')]
+                 'AddBreakpoint', 'RemoveBreakpoint', 'ClearBreakpoints', 'AddTracepoint',
+                 'Attach', 'Detach', 'Command')]
     [string]$Action,
     [string]$File,
     [int]$Line = 0,
     [string]$Condition = '',
+    [string]$Message = '',
+    [string]$TargetName = '',
+    [int]$TargetPid = 0,
     [string]$Command,
     [int]$WaitSeconds = 30,   # espera maxima a que la ejecucion vuelva a pausa/termine
     [string]$Solution,
@@ -25,44 +33,6 @@ param(
 
 . "$PSScriptRoot\vs-common.ps1"
 
-# Espera a que el modo deje de ser "run". Devuelve el modo final (3 = sigue ejecutando).
-function Wait-NotRunning {
-    param($Dbg, [int]$Seconds)
-    Start-Sleep -Milliseconds 700
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
-        $m = [int](Invoke-Com { $Dbg.CurrentMode })
-        if ($m -ne 3) { return $m }
-        Start-Sleep -Milliseconds 300
-    }
-    return 3
-}
-
-function Wait-Mode {
-    param($Dbg, [int]$Target, [int]$Seconds)
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
-        $m = [int](Invoke-Com { $Dbg.CurrentMode })
-        if ($m -eq $Target) { return $m }
-        Start-Sleep -Milliseconds 300
-    }
-    return [int](Invoke-Com { $Dbg.CurrentMode })
-}
-
-function Get-Brief {
-    param($Vs, [string]$Action, [bool]$TimedOut = $false)
-    $dbg = $Vs.Dte.Debugger
-    $mode = [int](Invoke-Com { $dbg.CurrentMode })
-    $res = [ordered]@{ ok = $true; action = $Action; debuggerMode = Get-ModeName $mode }
-    if ($TimedOut) { $res.note = 'La ejecucion sigue en marcha (no ha vuelto a pausa dentro del tiempo de espera).' }
-    if ($mode -eq 2) {
-        $frame = Try-Get { $dbg.CurrentStackFrame }
-        if ($frame) { $res.function = [string]$frame.FunctionName }
-        $doc = Try-Get { $Vs.Dte.ActiveDocument }
-        if ($doc) { $res.sourcePosition = [pscustomobject]@{ file = [string]$doc.FullName; line = [int]$doc.Selection.CurrentLine } }
-    }
-    return [pscustomobject]$res
-}
 
 # Acepta ruta completa o solo nombre de fichero (se busca dentro de la carpeta de la solucion).
 function Resolve-SourceFile {
@@ -168,6 +138,50 @@ Invoke-Main {
             foreach ($b in $dbg.Breakpoints) { $targets += $b }
             foreach ($b in $targets) { $b.Delete() }
             Write-Json ([pscustomobject]@{ ok = $true; action = 'ClearBreakpoints'; removed = $targets.Count })
+        }
+        'AddTracepoint' {
+            if ($Line -lt 1) { throw 'Falta -Line.' }
+            if (-not $Message) { throw 'Falta -Message (puedes usar {expresion} para interpolar valores).' }
+            $path = Resolve-SourceFile $vs $File
+            Invoke-Com { $dbg.Breakpoints.Add('', $path, $Line, 1, $Condition, 1, '', '', 1, '', 0, 1) } | Out-Null
+            $bp = $null
+            foreach ($b in $dbg.Breakpoints) {
+                if (([string]$b.File) -ieq $path -and [int]$b.FileLine -eq $Line) { $bp = $b }
+            }
+            if (-not $bp) { throw 'No se pudo localizar el breakpoint recien creado.' }
+            try {
+                $bp.Message = $Message
+                $bp.BreakWhenHit = $false
+            }
+            catch {
+                try { $bp.Delete() } catch {}
+                throw ('Esta version de Visual Studio no permitio configurar el tracepoint por DTE (' + $_.Exception.Message + '). Se elimino el breakpoint creado.')
+            }
+            Write-Json ([pscustomobject]@{ ok = $true; action = 'AddTracepoint'; file = $path; line = $Line; message = $Message; condition = $Condition; note = 'Los mensajes aparecen en la ventana Output (panel Debug).' })
+        }
+        'Attach' {
+            if ($TargetPid -le 0 -and -not $TargetName) { throw 'Indica -TargetName <texto> o -TargetPid <n>.' }
+            if ($mode -ne 1) { throw 'Ya hay una sesion de depuracion en curso; detenla o desenganchate primero.' }
+            $cands = @()
+            foreach ($p in $dbg.LocalProcesses) {
+                if ($TargetPid -gt 0) { if ([int]$p.ProcessID -eq $TargetPid) { $cands += $p } }
+                elseif (([string]$p.Name) -like "*$TargetName*") { $cands += $p }
+            }
+            if ($cands.Count -eq 0) { throw 'Ningun proceso coincide. Usa vs-state.ps1 -What Processes -Filter <texto> para verlos (si VS no es administrador, no ve procesos elevados).' }
+            if ($cands.Count -gt 1) { throw ('Varios procesos coinciden; usa -TargetPid. Candidatos: ' + (($cands | Select-Object -First 8 | ForEach-Object { '[' + $_.ProcessID + '] ' + $_.Name }) -join '; ')) }
+            $target = $cands[0]
+            $targetLabel = '[' + [string]$target.ProcessID + '] ' + [string]$target.Name
+            Invoke-Com { $target.Attach() } | Out-Null
+            Wait-Mode $dbg 3 $WaitSeconds | Out-Null
+            $brief = Get-Brief $vs 'Attach' $false
+            $brief | Add-Member -NotePropertyName attachedTo -NotePropertyValue $targetLabel
+            Write-Json $brief
+        }
+        'Detach' {
+            if ($mode -eq 1) { throw 'No hay sesion de depuracion activa.' }
+            Invoke-Com { $dbg.DetachAll() } | Out-Null
+            $m = Wait-Mode $dbg 1 $WaitSeconds
+            Write-Json (Get-Brief $vs 'Detach' ($m -ne 1))
         }
         'Command' {
             if (-not $Command) { throw 'Falta -Command.' }

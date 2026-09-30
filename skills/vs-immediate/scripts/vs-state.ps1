@@ -4,12 +4,17 @@
 #   -What Stack        pila de llamadas del hilo actual (break mode)
 #   -What Breakpoints  breakpoints definidos
 #   -What Output       ultimas lineas de un panel de la ventana Output (por defecto "Debug")
+#   -What Errors       Lista de errores de VS (errores/avisos del ultimo build); -Level Error|Warning|All
+#   -What Processes    procesos locales que se pueden depurar; -Filter <texto del nombre>
 param(
-    [ValidateSet('Status', 'Locals', 'Stack', 'Breakpoints', 'Output')]
+    [ValidateSet('Status', 'Locals', 'Stack', 'Breakpoints', 'Output', 'Errors', 'Processes')]
     [string]$What = 'Status',
-    [int]$Top = 30,        # maximo de elementos para Locals / Stack / Breakpoints
+    [int]$Top = 30,        # maximo de elementos para Locals / Stack / Breakpoints / Errors / Processes
     [int]$Tail = 50,       # lineas finales para Output
     [string]$Pane = 'Debug',
+    [ValidateSet('Error', 'Warning', 'All')]
+    [string]$Level = 'Error',
+    [string]$Filter = '',
     [string]$Solution,
     [int]$ProcessId = 0
 )
@@ -107,6 +112,31 @@ Invoke-Main {
             $lines = @($text -split "\r?\n")
             if ($lines.Count -gt $Tail) { $lines = $lines[($lines.Count - $Tail)..($lines.Count - 1)] }
             Write-Json ([pscustomobject]@{ ok = $true; pane = $Pane; lines = $lines })
+        }
+        'Errors' {
+            $items = $vs.Dte.ToolWindows.ErrorList.ErrorItems
+            $total = [int]$items.Count
+            $found = @()
+            for ($i = 1; $i -le $total; $i++) {
+                $it = $items.Item($i)
+                $lvl = [int]$it.ErrorLevel
+                if ($Level -eq 'Error' -and $lvl -ne 1) { continue }
+                if ($Level -eq 'Warning' -and $lvl -ne 2) { continue }
+                $name = switch ($lvl) { 1 { 'error' } 2 { 'warning' } default { 'message' } }
+                $found += [pscustomobject]@{ level = $name; file = [string]$it.FileName; line = [int]$it.Line; project = [string]$it.Project; message = Limit-Text ([string]$it.Description) 400 }
+                if ($found.Count -ge $Top) { break }
+            }
+            Write-Json ([pscustomobject]@{ ok = $true; totalInList = $total; shown = $found.Count; items = $found; note = 'La Lista de errores refleja el ultimo build/analisis de VS; puede estar desactualizada.' })
+        }
+        'Processes' {
+            $found = @()
+            foreach ($p in $dbg.LocalProcesses) {
+                $nm = [string]$p.Name
+                if ($Filter -and $nm -notlike "*$Filter*") { continue }
+                $found += [pscustomobject]@{ pid = [int]$p.ProcessID; name = $nm }
+                if ($found.Count -ge $Top) { break }
+            }
+            Write-Json ([pscustomobject]@{ ok = $true; count = $found.Count; processes = $found })
         }
     }
 }
