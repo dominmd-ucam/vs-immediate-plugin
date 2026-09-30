@@ -91,7 +91,7 @@ Tras cada consulta que evalue expresiones (`vs-eval`, `vs-types`, `vs-elsa`, `vs
 
 - Una linea por expresion, con el prefijo `?` para las que devuelven un valor (`? clientes.Count`) y sin prefijo para las sentencias (`sinEmail.Add(x)`).
 - La expresion exacta que se envio al depurador, no una version resumida. Si se adapto (por ejemplo se quito un `;` o se cambio el separador `,,` por lineas separadas), muestra la version adaptada, que es la que funciona en la ventana.
-- Indica el contexto en el que se evaluo: funcion del frame actual y hilo, porque la Ventana Inmediato evalua en el frame seleccionado.
+- Indica el contexto en el que se evaluo: funcion del frame actual y hilo, porque la Ventana Inmediato evalua en el frame seleccionado. `vs-eval` ya lo devuelve en `context` (function, threadId) y la linea lista para pegar en `paste`: usalos, no lances consultas extra de pila.
 - Con `vs-elsa` y `vs-types` muestra las expresiones principales que se evaluaron (por ejemplo `? context.WorkflowExecutionContext.Id`), no la lista completa de sondeo.
 - Con `vs-state` (locales, pila, hilos) no hace falta: no son expresiones.
 

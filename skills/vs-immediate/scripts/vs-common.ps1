@@ -95,6 +95,16 @@ function Write-History {
     catch { }
 }
 
+# Contexto en el que se evalua una expresion: funcion del frame seleccionado e hilo actual.
+function Get-EvalContext {
+    param($Dbg)
+    $fn = $null
+    $frame = Try-Get { $Dbg.CurrentStackFrame }
+    if ($frame) { $fn = [string]$frame.FunctionName }
+    $tid = Try-Get { [int]$Dbg.CurrentThread.ID }
+    return [pscustomobject]@{ function = $fn; threadId = $tid }
+}
+
 function Invoke-Main {
     param([scriptblock]$Body)
     try {

@@ -66,7 +66,7 @@ Invoke-Main {
             throw ("No se ejecuto: el depurador rechazo la sentencia. Mensaje: " + (Limit-Text ([string]$r.Value) 300) + " (no se admiten declaraciones de variables ni variables del depurador como `$x; usa asignaciones a campos u objetos vivos, o una sola expresion).")
         }
         Write-History 'execute' $Expression $true ([string]$r.Value)
-        Write-Json ([pscustomobject]@{ ok = $true; executed = $Expression; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value)); verified = $true })
+        Write-Json ([pscustomobject]@{ ok = $true; executed = $Expression; paste = $Expression; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value)); verified = $true; context = (Get-EvalContext $dbg) })
         return
     }
 
@@ -76,6 +76,8 @@ Invoke-Main {
     $out = [ordered]@{
         ok         = $valid
         expression = $Expression
+        paste      = ('? ' + $Expression)
+        context    = (Get-EvalContext $dbg)
         valid      = $valid
         type       = [string]$r.Type
         value      = Limit-Text ([string]$r.Value)
