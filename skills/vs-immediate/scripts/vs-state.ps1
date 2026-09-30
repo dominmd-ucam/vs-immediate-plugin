@@ -83,9 +83,11 @@ Invoke-Main {
         'Breakpoints' {
             $items = @()
             $n = 0
+            $totalBp = 0
             foreach ($b in $dbg.Breakpoints) {
                 $n++
-                if ($n -gt $Top) { break }
+                $totalBp++
+                if ($n -gt $Top) { continue }
                 $items += [pscustomobject]@{
                     file      = [string]$b.File
                     line      = [int]$b.FileLine
@@ -94,7 +96,7 @@ Invoke-Main {
                     function  = [string]$b.FunctionName
                 }
             }
-            Write-Json ([pscustomobject]@{ ok = $true; count = $items.Count; breakpoints = $items })
+            Write-Json ([pscustomobject]@{ ok = $true; total = $totalBp; shown = $items.Count; count = $totalBp; breakpoints = $items })
         }
         'Output' {
             $panes = $vs.Dte.ToolWindows.OutputWindow.OutputWindowPanes

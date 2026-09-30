@@ -14,6 +14,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Functions,
     [int]$TimeoutMs = 10000,
+    [switch]$UseStatement,   # evalua con ExecuteStatement (semantica de la Ventana Inmediato) en vez de GetExpression
+    [int]$SettleMs = 500,    # espera tras crear los breakpoints, para que el depurador los enlace
     [string]$Solution,
     [int]$ProcessId = 0
 )
@@ -59,9 +61,32 @@ Invoke-Main {
         $startHits = @{}
         foreach ($b in $mine) { $startHits[[string]$b.FunctionName] = [int](Try-Get { $b.CurrentHits }) }
 
-        $r = Invoke-Com { $dbg.GetExpression($Expression, $false, $TimeoutMs) }
-        Write-History 'trace' $Expression ([bool]$r.IsValidValue) ([string]$r.Value)
-        $result = [pscustomobject]@{ valid = [bool]$r.IsValidValue; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value) 400) }
+        if ($SettleMs -gt 0) { Start-Sleep -Milliseconds $SettleMs }
+
+        # Diagnostico de cada breakpoint tal como lo ve el depurador (para distinguir enlazados de no enlazados).
+        $diag = @()
+        foreach ($b in $mine) {
+            $diag += [pscustomobject]@{
+                reportedName = [string](Try-Get { $b.FunctionName })
+                enabled      = (Try-Get { [bool]$b.Enabled })
+                hitCountType = (Try-Get { [int]$b.HitCountType })
+                hitCountTarget = (Try-Get { [int]$b.HitCountTarget })
+                children     = (Try-Get { [int]$b.Children.Count })
+                hitsBefore   = (Try-Get { [int]$b.CurrentHits })
+            }
+        }
+
+        if ($UseStatement) {
+            # ExecuteStatement no devuelve valor ni informa de errores: se compensa mirando el modo despues.
+            Invoke-Com { $dbg.ExecuteStatement($Expression, $TimeoutMs, $true) } | Out-Null
+            Write-History 'trace' $Expression $null ''
+            $result = [pscustomobject]@{ valid = $null; type = ''; value = '(ExecuteStatement no devuelve el valor)' }
+        }
+        else {
+            $r = Invoke-Com { $dbg.GetExpression($Expression, $false, $TimeoutMs) }
+            Write-History 'trace' $Expression ([bool]$r.IsValidValue) ([string]$r.Value)
+            $result = [pscustomobject]@{ valid = [bool]$r.IsValidValue; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value) 400) }
+        }
 
         foreach ($row in $rows) {
             if (-not $row.created) { continue }
@@ -85,6 +110,11 @@ Invoke-Main {
     }
 
     $ran = @($rows | Where-Object { $_.hits -gt 0 })
+    $conclusive = ($ran.Count -gt 0)
+    $verdict = $null
+    if (-not $conclusive) {
+        $verdict = 'NO CONCLUYENTE: ninguna funcion registro aciertos. No significa que no se ejecutaran: las evaluaciones tipo Inspeccion/Locales (GetExpression) ignoran los breakpoints y los nombres sin enlazar tampoco avisan. Prueba con -UseStatement o deduce el rastro leyendo el codigo. No presentes los 0 como "no se ejecuto".'
+    }
     $res = [ordered]@{
         ok         = $true
         expression = $Expression
@@ -93,6 +123,11 @@ Invoke-Main {
         notRan     = @($rows | Where-Object { $_.created -and $_.hits -eq 0 } | ForEach-Object { $_.function })
         unknown    = @($rows | Where-Object { $_.created -and $null -eq $_.hits } | ForEach-Object { $_.function })
         notCreated = @($rows | Where-Object { -not $_.created } | ForEach-Object { [pscustomobject]@{ function = $_.function; error = $_.error } })
+        conclusive = $conclusive
+        verdict    = $verdict
+        paste      = ('? ' + $Expression)
+        breakpointDiagnostics = $diag
+        method     = $(if ($UseStatement) { 'ExecuteStatement' } else { 'GetExpression' })
         cleanedUp  = $mine.Count
         note       = 'Solo se vigilan las funciones indicadas. hits = veces que se ejecuto durante esta evaluacion. 0 puede ser "no se ejecuto" o "el breakpoint no enlazo" (revisa el nombre; sintaxis: Ns.Clase.Metodo o Ns.Clase.Propiedad.get).'
     }
