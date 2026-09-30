@@ -29,7 +29,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<base>\scripts\vs-eval.
 
 Todos devuelven JSON con `"ok": true/false`. Si `ok` es false, lee `error`: casi siempre explica que hacer.
 
-Si la expresion lleva comillas o caracteres que el shell puede estropear, escribela en un fichero temporal y usa `-ExpressionFile <ruta>`.
+### Comillas dobles en las expresiones (regla de prioridad)
+
+Las comillas dobles se pierden o parten el argumento al pasar por la linea de comandos: `"648000"` llega como el numero 648000 (error CS1503) o PowerShell da un error absurdo en otro parametro (por ejemplo `Depth`). Sigue SIEMPRE este orden:
+
+1. **`~q~` (primera opcion, siempre).** En `-Expression`, `-Expressions`, `-Extra` escribe `~q~` en lugar de cada comilla doble, y rodea el argumento con comillas simples:
+   `-Expression 'lista.Where(p => p.Id.StartsWith(~q~648000~q~)).Count()'`
+   El script lo convierte en `"` antes de evaluar. Sustituye TODAS las comillas dobles de la expresion, tambien las de literales como `string.Join(~q~ | ~q~, ...)` o `~q~ -> ~q~`. **Antes de lanzar, comprueba que en la expresion no queda ninguna comilla doble real**: una sola suelta rompe el argumento. No uses `''` ni `\"` para esto.
+2. **Si falla, reintenta una vez con `~q~`** revisando que no quede ninguna `"` suelta (es el fallo mas habitual).
+3. **Solo si `~q~` ha fallado dos veces**, escribe la expresion en un fichero temporal de una sola linea y usa `-ExpressionFile <ruta>`. Esas llamadas siempre piden permiso al usuario.
+
+No empieces por el fichero temporal.
 
 Cuando un parametro admite varias expresiones (`vs-types`, `vs-watch`), van separadas por `,,` dentro de un unico argumento.
 
@@ -109,7 +119,7 @@ Si el usuario pregunta que expresiones se han usado ("que has evaluado", "dame e
 
 ## Permisos
 
-El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types`/`vs-elsa` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando de una sola linea, sin encadenar (`;`, `&&`, `|`), sin redirigir (`>`), sin saltos de linea y sin asignar variables de PowerShell (`$v = ...`) ni usar `$(...)`: si se compone un script con varias sentencias, el hook no aplica y todo pedira permiso. Un comando por llamada. Las comillas dobles se pierden al pasar por la linea de comandos y `"648000"` llega como el numero 648000 (error CS1503). Convencion: en `-Expression`, `-Expressions`, `-Extra` escribe `~q~` donde iria una comilla doble: `p.OriginId.StartsWith(~q~648000~q~)` llega al depurador como `p.OriginId.StartsWith("648000")`. Sustituye TODAS las comillas dobles de la expresion, tambien las de literales como `string.Join(~q~ | ~q~, ...)`, y no las mezcles con comillas dobles reales. Es el marcador preferido porque no depende de las comillas exteriores; `''` tambien se admite, pero en PowerShell dentro de comillas simples `''` se reduce a una sola comilla y falla. Es la forma preferida; no hace falta crear ficheros. Usa `-ExpressionFile` solo como ultimo recurso: esas llamadas siempre piden permiso, porque el hook no puede ver el contenido del fichero.
+El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types`/`vs-elsa` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando de una sola linea, sin encadenar (`;`, `&&`, `|`), sin redirigir (`>`), sin saltos de linea y sin asignar variables de PowerShell (`$v = ...`) ni usar `$(...)`: si se compone un script con varias sentencias, el hook no aplica y todo pedira permiso. Un comando por llamada. Para comillas dobles en las expresiones, sigue la regla de prioridad de la seccion "Como invocar los scripts" (`~q~` primero; el fichero temporal solo como ultimo recurso, y esas llamadas siempre piden permiso porque el hook no puede ver su contenido).
 
 La linea de `sourcePosition` sale del cursor del editor, no de la flecha amarilla: si importa la linea exacta, usa `vs-state.ps1 -What Status -SyncCaret`.
 

@@ -86,7 +86,7 @@ Invoke-Main {
         type       = [string]$r.Type
         value      = Limit-Text ([string]$r.Value)
     }
-    if ($ExpressionFile) { $out.tip = 'Para la proxima consulta no hace falta crear un fichero: pasa la expresion en -Expression escribiendo ~q~ donde iria cada comilla doble (p.ej. StartsWith(~q~648000~q~)), sin ninguna comilla doble real dentro.' }
+    if ($ExpressionFile) { $out.tip = 'El fichero es el ultimo recurso. Primera opcion siempre: -Expression con ~q~ en lugar de CADA comilla doble (p.ej. StartsWith(~q~648000~q~)), sin ninguna comilla doble real dentro, y el argumento entre comillas simples.' }
     if (-not $valid -and $Expression -match "'") { $out.hint = 'La expresion lleva comillas simples: si querias comillas dobles de C#, escribe ~q~ en su lugar (p.ej. StartsWith(~q~648000~q~)); las comillas se pierden o cambian al pasar por la linea de comandos.' }
     if (-not $valid) { $out.error = 'La expresion no se pudo evaluar: ' + (Limit-Text ([string]$r.Value) 300) }
     if (-not $valid) { $out.note = 'La expresion no es valida en este contexto; "value" contiene el mensaje del depurador.' }
