@@ -64,6 +64,9 @@ switch ($name) {
     'vs-types' {
         if (Test-SimpleExpression $cmd) { Approve 'vs-immediate: tipos declarados y reales (solo lectura)' }
     }
+    'vs-elsa' {
+        if (Test-SimpleExpression $cmd) { Approve 'vs-immediate: sondeo del contexto de Elsa (solo lectura)' }
+    }
 }
 
 exit 0

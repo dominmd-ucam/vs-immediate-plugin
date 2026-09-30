@@ -1,7 +1,7 @@
 # vs-types.ps1 - Tipo declarado frente a tipo real (en ejecucion) de variables e interfaces. Break mode.
 # El depurador muestra las variables de tipo interfaz como "Ns.IFoo {Ns.Foo}": entre llaves va la clase real.
 #   -This                          inspecciona los miembros (campos y propiedades, tambien privados) de "this"
-#   -Expressions "a;;b"            inspecciona expresiones concretas (separadas por ;;)
+#   -Expressions "a,,b"            inspecciona expresiones concretas (separadas por ,,)
 #   -Filter texto                  con -This, solo los miembros cuyo nombre o tipo contengan el texto
 # No llama a metodos de la aplicacion: solo lee lo que el depurador ya muestra.
 param(
@@ -55,7 +55,7 @@ function Get-MemberItems {
 }
 
 Invoke-Main {
-    if (-not $This -and -not $Expressions) { throw 'Indica -This o -Expressions "a;;b".' }
+    if (-not $This -and -not $Expressions) { throw 'Indica -This o -Expressions "a,,b".' }
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
     Assert-BreakMode $vs
     $dbg = $vs.Dte.Debugger
@@ -70,7 +70,7 @@ Invoke-Main {
 
     if ($Expressions) {
         $list = @()
-        foreach ($e in ($Expressions -split ';;')) {
+        foreach ($e in ($Expressions -split ',,')) {
             $e = $e.Trim()
             if (-not $e) { continue }
             $r = Try-Get { $dbg.GetExpression($e, $false, 3000) }

@@ -18,7 +18,7 @@ El depurador muestra las variables de tipo interfaz como `Ns.IFoo {Ns.Foo}`: ant
 3. Inspecciona sus dependencias:
    - `vs-types.ps1 -This` lista los campos y propiedades (incluidos los privados) con tipo declarado y real.
    - `-Filter <texto>` reduce la lista a los miembros cuyo nombre o tipo contengan el texto (por ejemplo `-Filter Writer`).
-   - `-Expressions "_writer;;_options.Value"` para variables o miembros concretos (separadas por `;;`).
+   - `-Expressions "_writer,,_options.Value"` para variables o miembros concretos (separadas por `,,`).
 4. Interpreta:
    - `runtimeType` vacío y `declaredType` de clase o tipo simple: no hay interfaz de por medio.
    - `isNull: true`: la dependencia no está inyectada o no se ha inicializado todavía.

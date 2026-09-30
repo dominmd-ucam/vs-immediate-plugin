@@ -9,7 +9,7 @@ Puente entre Claude Code y una instancia de Visual Studio en ejecucion, usando l
 
 Solo Windows. Se ejecuta siempre con Windows PowerShell 5.1 (`powershell.exe`), no con `pwsh`.
 
-Skills relacionadas del mismo plugin (flujos completos que usan estos scripts): `vs-diagnose` (investigar un fallo), `vs-elsa` (workflows y actividades de Elsa), `vs-di-inspect` (que implementacion hay tras una interfaz), `vs-watch` (seguir valores entre pausas), `vs-repro` (dejar un fallo reproducible).
+Skills relacionadas del mismo plugin (flujos completos que usan estos scripts): `vs-diagnose` (investigar un fallo), `vs-elsa` (workflows y actividades de Elsa 3), `vs-di-inspect` (que implementacion hay tras una interfaz), `vs-watch` (seguir valores entre pausas), `vs-repro` (dejar un fallo reproducible).
 
 ## Cuando usarla
 
@@ -31,7 +31,7 @@ Todos devuelven JSON con `"ok": true/false`. Si `ok` es false, lee `error`: casi
 
 Si la expresion lleva comillas o caracteres que el shell puede estropear, escribela en un fichero temporal y usa `-ExpressionFile <ruta>`.
 
-Cuando un parametro admite varias expresiones (`vs-types`, `vs-watch`), van separadas por `;;` dentro de un unico argumento.
+Cuando un parametro admite varias expresiones (`vs-types`, `vs-watch`), van separadas por `,,` dentro de un unico argumento.
 
 ## Scripts
 
@@ -47,11 +47,12 @@ Solo lectura (el plugin las aprueba automaticamente si se llaman de forma simple
 | `vs-state.ps1 -What Output -Pane Debug -Tail 50` | Ultimas lineas de la ventana Output. |
 | `vs-state.ps1 -What Errors [-Level Error\|Warning\|All]` | Lista de errores de VS (ultimo build/analisis). |
 | `vs-state.ps1 -What Processes -Filter <texto>` | Procesos locales a los que se puede enganchar el depurador. |
-| `vs-eval.ps1 -Expression "<expr>"` | Evalua una expresion. `-Members` lista sus miembros. |
-| `vs-types.ps1 -This` / `-Expressions "a;;b"` | Tipo declarado y tipo real (implementacion tras una interfaz). No ejecuta metodos. |
+| `vs-eval.ps1 -Expression "<expr>"` | Evalua una expresion. `-Members` lista sus miembros; `-Depth 2` o `3` explora en profundidad; `-Private` incluye miembros no publicos. |
+| `vs-types.ps1 -This` / `-Expressions "a,,b"` | Tipo declarado y tipo real (implementacion tras una interfaz). No ejecuta metodos. |
 | `vs-exceptions.ps1 -Action Last` | Ultima excepcion: tipo, mensaje, cadena de InnerException, pila. |
 | `vs-exceptions.ps1 -Action List [-Group g -Type texto]` | Grupos de excepciones y su configuracion (experimental). |
 | `vs-threads.ps1 -Action List` / `-Action Stack -ThreadId n` | Hilos y su ubicacion; pila de otro hilo sin cambiar de hilo. |
+| `vs-elsa.ps1 [-Root context]` | Sondeo del contexto de Elsa 3: instancia, estado, correlacion, bookmarks, incidentes. Dice que nombres existen en tu version. |
 
 Modifican algo (piden permiso salvo que el usuario ya lo haya pedido):
 
@@ -60,7 +61,7 @@ Modifican algo (piden permiso salvo que el usuario ya lo haya pedido):
 | `vs-eval.ps1 -Expression "<sentencia>" -Execute` | Ejecuta una sentencia (asignaciones, llamadas). Cambia el estado de la aplicacion. |
 | `vs-threads.ps1 -Action Switch -ThreadId n` | Cambia el hilo actual del depurador. |
 | `vs-exceptions.ps1 -Action Break\|NoBreak -Type <T>` | Activa o desactiva "parar al lanzarse" para un tipo de excepcion (experimental). |
-| `vs-watch.ps1 -Expressions "a;;b" -Iterations 5` | Instantaneas de varias expresiones a lo largo de varias pausas (continua la ejecucion). |
+| `vs-watch.ps1 -Expressions "a,,b" -Iterations 5` | Instantaneas de varias expresiones a lo largo de varias pausas (continua la ejecucion). |
 | `vs-control.ps1 -Action Build` | Compila la solucion (modo diseno). |
 | `vs-control.ps1 -Action Start` | Inicia la depuracion (F5). |
 | `vs-control.ps1 -Action Attach -TargetName <texto>` / `-TargetPid n` | Se engancha a un proceso ya en marcha. `Detach` se desengancha. |
@@ -92,7 +93,7 @@ Opciones comunes: `-Solution <texto de la ruta>` o `-ProcessId <pid>` para elegi
 
 ## Permisos
 
-El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando, sin encadenar (`;`, `&&`, `|`) ni redirigir (`>`).
+El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types`/`vs-elsa` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando, sin encadenar (`;`, `&&`, `|`) ni redirigir (`>`).
 
 ## Problemas frecuentes
 

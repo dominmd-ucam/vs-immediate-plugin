@@ -28,13 +28,13 @@ Skills (Claude las usa solo cuando encajan con lo que pides):
 
 - vs-immediate: los scripts base (evaluar, estado, control) y sus reglas de seguridad
 - vs-diagnose: investigar un fallo con pocos breakpoints y una hipotesis apoyada en valores
-- vs-elsa: depurar workflows y actividades de Elsa (donde parar, que mirar, timeouts)
+- vs-elsa: depurar workflows y actividades de Elsa 3 (sondeo del contexto, incidentes, bookmarks, breakpoints por instancia, timeouts)
 - vs-di-inspect: que implementacion real hay tras cada interfaz inyectada
 - vs-watch: seguir valores a lo largo de varias pausas
 - vs-repro: dejar un fallo como receta repetible
 
 Comandos rapidos: `/vs-status`, `/vs-locals`, `/vs-stack`, `/vs-eval <expr>`,
-`/vs-exception`, `/vs-threads`, `/vs-breakpoints`.
+`/vs-exception`, `/vs-threads`, `/vs-breakpoints`, `/vs-elsa`.
 
 Agente: `vs-debugger`, para delegar investigaciones largas de depuracion.
 
@@ -54,6 +54,7 @@ simples). Todo lo que cambia algo sigue pidiendo permiso. Detalles y limites en
         vs-exceptions.ps1              ultima excepcion y configuracion de excepciones
         vs-threads.ps1                 hilos
         vs-watch.ps1                   valores a lo largo de varias pausas
+        vs-elsa.ps1                    sondeo del contexto de Elsa 3
         vs-control.ps1                 compilar, iniciar, pasos, breakpoints, tracepoints, attach
 
 ## Primera prueba

@@ -1,7 +1,7 @@
 # vs-watch.ps1 - Sigue el valor de varias expresiones a lo largo de varias pausas.
 # Toma una instantanea en la pausa actual, continua la ejecucion, espera a la siguiente pausa
 # (breakpoint, normalmente condicional) y repite hasta -Iterations veces.
-#   -Expressions "a;;b;;c.Count"   expresiones separadas por ;;
+#   -Expressions "a,,b,,c.Count"   expresiones separadas por ,,
 #   -Iterations 5                  numero de instantaneas (maximo 50)
 #   -WaitSeconds 30                espera maxima a la siguiente pausa
 # Requiere break mode al empezar. Deja el depurador en la ultima pausa (o en ejecucion si no volvio a parar).
@@ -36,7 +36,7 @@ function Get-Snapshot {
 }
 
 Invoke-Main {
-    $exprs = @($Expressions -split ';;' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $exprs = @($Expressions -split ',,' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     if ($exprs.Count -eq 0) { throw 'Falta al menos una expresion en -Expressions.' }
     if ($Iterations -lt 1) { $Iterations = 1 }
     if ($Iterations -gt 50) { $Iterations = 50 }
