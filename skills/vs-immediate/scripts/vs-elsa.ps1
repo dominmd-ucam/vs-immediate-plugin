@@ -65,6 +65,7 @@ Invoke-Main {
         throw ("La expresion '$Root' no es valida en este punto. Usa -Root con el nombre real del contexto (por ejemplo el parametro de ExecuteAsync) o para en un punto donde exista.")
     }
     $rootType = [string]$r.Type
+    Write-History 'elsa' $Root $true $rootType
 
     $kind = $Kind
     if ($kind -eq 'Auto') {
@@ -121,6 +122,7 @@ Invoke-Main {
         $e = $e.Trim()
         if (-not $e) { continue }
         $v = Eval-Value $dbg $e
+        Write-History 'elsa' $e ($null -ne $v) ([string]$v)
         if ($null -ne $v) { $extraValues[$e] = Limit-Text (Unquote-Text $v) 300 } else { $extraValues[$e] = '(no valida en este contexto)' }
     }
 

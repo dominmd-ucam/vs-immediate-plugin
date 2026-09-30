@@ -66,6 +66,35 @@ function Write-Json {
     $Object | ConvertTo-Json -Depth 6
 }
 
+# Historial de expresiones evaluadas (una linea JSON por entrada). Nunca debe romper la consulta.
+function Get-HistoryPath {
+    $base = $env:LOCALAPPDATA
+    if (-not $base) { $base = [System.IO.Path]::GetTempPath() }
+    return (Join-Path (Join-Path $base 'vs-immediate') 'history.jsonl')
+}
+
+function Write-History {
+    param([string]$Kind, [string]$Expression, $Valid = $null, [string]$Value = '')
+    try {
+        if (-not $Expression) { return }
+        $path = Get-HistoryPath
+        $dir = Split-Path -Parent $path
+        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $entry = [ordered]@{ time = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss'); kind = $Kind; expression = $Expression }
+        if ($null -ne $Valid) { $entry.valid = [bool]$Valid }
+        if ($Value) { $entry.value = (Limit-Text $Value 80) }
+        $line = ($entry | ConvertTo-Json -Compress)
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::AppendAllText($path, $line + "`n", $utf8)
+        # Recorte: si pasa de ~1 MB se queda con las ultimas 500 lineas.
+        if ((Get-Item -LiteralPath $path).Length -gt 1048576) {
+            $keep = @(Get-Content -LiteralPath $path -Encoding UTF8 | Select-Object -Last 500)
+            [System.IO.File]::WriteAllText($path, (($keep -join "`n") + "`n"), $utf8)
+        }
+    }
+    catch { }
+}
+
 function Invoke-Main {
     param([scriptblock]$Body)
     try {

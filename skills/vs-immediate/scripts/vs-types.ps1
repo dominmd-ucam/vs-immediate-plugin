@@ -65,6 +65,7 @@ Invoke-Main {
     if ($This) {
         $r = Invoke-Com { $dbg.GetExpression('this', $false, 5000) }
         if (-not $r.IsValidValue) { throw 'No hay "this" en el frame actual (metodo estatico o sin contexto).' }
+        Write-History 'types' 'this' $true ([string]$r.Type)
         $out.thisType = [string]$r.Type
         $out.members = @(Get-MemberItems $r.DataMembers $Filter $Top)
     }
@@ -81,6 +82,7 @@ Invoke-Main {
             else {
                 $item = [pscustomobject]@{ name = $e; declaredType = ''; runtimeType = ''; isNull = $false; value = '(expresion no valida en este contexto)' }
             }
+            Write-History 'types' $e ([bool]($r -and $r.IsValidValue)) ([string]$item.value)
             $list += $item
         }
         $out.expressions = $list

@@ -45,6 +45,7 @@ Invoke-Main {
     Assert-BreakMode $vs
     $dbg = $vs.Dte.Debugger
 
+    foreach ($e in $exprs) { Write-History 'watch' $e }
     $snaps = @()
     $note = $null
     $snaps += Get-Snapshot $vs $exprs 1

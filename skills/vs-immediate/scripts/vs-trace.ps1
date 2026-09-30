@@ -60,6 +60,7 @@ Invoke-Main {
         foreach ($b in $mine) { $startHits[[string]$b.FunctionName] = [int](Try-Get { $b.CurrentHits }) }
 
         $r = Invoke-Com { $dbg.GetExpression($Expression, $false, $TimeoutMs) }
+        Write-History 'trace' $Expression ([bool]$r.IsValidValue) ([string]$r.Value)
         $result = [pscustomobject]@{ valid = [bool]$r.IsValidValue; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value) 400) }
 
         foreach ($row in $rows) {

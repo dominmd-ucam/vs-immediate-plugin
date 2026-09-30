@@ -52,6 +52,9 @@ $name = $Matches[1]
 switch ($name) {
     'vs-list' { Approve 'vs-immediate: listar instancias de Visual Studio (solo lectura)' }
     'vs-state' { Approve 'vs-immediate: consulta de estado (solo lectura)' }
+    'vs-history' {
+        if ($cmd -notmatch '-Clear\b') { Approve 'vs-immediate: historial de expresiones (solo lectura)' }
+    }
     'vs-threads' {
         if ($cmd -notmatch '-Action\s+"?Switch\b') { Approve 'vs-immediate: hilos (solo lectura)' }
     }

@@ -47,6 +47,7 @@ Solo lectura (el plugin las aprueba automaticamente si se llaman de forma simple
 | `vs-state.ps1 -What Output -Pane Debug -Tail 50` | Ultimas lineas de la ventana Output. En VS 2026 DTE puede devolver cero paneles (limite de VS, verificado): entonces falla con un mensaje claro; prueba `-Pane Active` o pide al usuario que mire la ventana Output. No lo intentes por otras vias. |
 | `vs-state.ps1 -What Errors [-Level Error\|Warning\|All]` | Lista de errores de VS (ultimo build/analisis). |
 | `vs-state.ps1 -What Processes -Filter <texto>` | Procesos locales a los que se puede enganchar el depurador. |
+| `vs-history.ps1 [-Unique] [-Last 20] [-Kind eval]` | Lista las expresiones evaluadas con el plugin (persistente entre sesiones). Campo `lines`: listo para pegar. `-Clear` lo borra (pide permiso). |
 | `vs-eval.ps1 -Expression "<expr>"` | Evalua una expresion. `-Members` lista sus miembros; `-Depth 2` o `3` explora en profundidad; `-Private` incluye miembros no publicos. |
 | `vs-types.ps1 -This` / `-Expressions "a,,b"` | Tipo declarado y tipo real (implementacion tras una interfaz). No ejecuta metodos. |
 | `vs-exceptions.ps1 -Action Last` | Ultima excepcion: tipo, mensaje, cadena de InnerException, pila. |
@@ -95,6 +96,8 @@ Tras cada consulta que evalue expresiones (`vs-eval`, `vs-types`, `vs-elsa`, `vs
 - Con `vs-state` (locales, pila, hilos) no hace falta: no son expresiones.
 
 Si la expresion modifica estado, dilo antes de mostrarla.
+
+Si el usuario pregunta que expresiones se han usado ("que has evaluado", "dame el listado"), no lo reconstruyas de memoria: ejecuta `vs-history.ps1 -Unique` (o con `-Last N`, `-Kind`) y muestra el campo `lines` en un bloque de codigo, una por linea, como `? clientes.Count`. Cada consulta con vs-eval, vs-types, vs-elsa, vs-trace o vs-watch queda registrada automaticamente, tambien las de sesiones anteriores.
 
 ## Reglas de seguridad
 
