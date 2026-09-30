@@ -52,6 +52,9 @@ Invoke-Main {
     if ($ExpressionFile) {
         $Expression = (Get-Content -LiteralPath $ExpressionFile -Raw -Encoding UTF8).Trim()
     }
+    else {
+        $Expression = Convert-QuoteEscapes $Expression
+    }
     if (-not $Expression) { throw 'Falta -Expression o -ExpressionFile.' }
 
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId

@@ -56,6 +56,7 @@ function Test-Valid {
 }
 
 Invoke-Main {
+    $Extra = Convert-QuoteEscapes $Extra
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
     Assert-BreakMode $vs
     $dbg = $vs.Dte.Debugger

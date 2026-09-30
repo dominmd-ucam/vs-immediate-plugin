@@ -56,6 +56,7 @@ function Get-MemberItems {
 }
 
 Invoke-Main {
+    $Expressions = Convert-QuoteEscapes $Expressions
     if (-not $This -and -not $Expressions) { throw 'Indica -This o -Expressions "a,,b".' }
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
     Assert-BreakMode $vs

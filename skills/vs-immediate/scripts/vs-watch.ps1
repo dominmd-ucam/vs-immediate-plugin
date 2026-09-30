@@ -36,6 +36,7 @@ function Get-Snapshot {
 }
 
 Invoke-Main {
+    $Expressions = Convert-QuoteEscapes $Expressions
     $exprs = @($Expressions -split ',,' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     if ($exprs.Count -eq 0) { throw 'Falta al menos una expresion en -Expressions.' }
     if ($Iterations -lt 1) { $Iterations = 1 }

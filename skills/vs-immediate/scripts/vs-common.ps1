@@ -105,6 +105,15 @@ function Get-EvalContext {
     return [pscustomobject]@{ function = $fn; threadId = $tid }
 }
 
+# Las comillas dobles se pierden al pasar por la linea de comandos (PowerShell/bash/cmd). Convencion: en los
+# parametros de expresion, dos comillas simples seguidas ('') equivalen a una comilla doble ("). En C# '' no es
+# valido en ningun otro sitio, asi que no hay ambiguedad. No se aplica al contenido de -ExpressionFile.
+function Convert-QuoteEscapes {
+    param([string]$Text)
+    if ($null -eq $Text) { return $Text }
+    return $Text.Replace("''", '"')
+}
+
 function Invoke-Main {
     param([scriptblock]$Body)
     try {

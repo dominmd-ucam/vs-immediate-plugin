@@ -23,6 +23,7 @@ param(
 . "$PSScriptRoot\vs-common.ps1"
 
 Invoke-Main {
+    $Expression = Convert-QuoteEscapes $Expression
     $names = @($Functions -split ',,' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     if ($names.Count -eq 0) { throw 'Falta al menos una funcion en -Functions.' }
     if ($names.Count -gt 15) { throw 'Maximo 15 funciones por rastro.' }
