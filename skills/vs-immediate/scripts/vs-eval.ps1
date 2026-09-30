@@ -59,8 +59,13 @@ Invoke-Main {
     $dbg = $vs.Dte.Debugger
 
     if ($Execute) {
-        Invoke-Com { $dbg.ExecuteStatement($Expression, $TimeoutMs, $false) } | Out-Null
-        Write-Json ([pscustomobject]@{ ok = $true; executed = $Expression })
+        # ExecuteStatement no informa de errores (devuelve sin excepcion aunque no haya hecho nada),
+        # asi que se ejecuta como expresion con efectos (asignaciones, llamadas void) y se comprueba el resultado.
+        $r = Invoke-Com { $dbg.GetExpression($Expression, $false, $TimeoutMs) }
+        if (-not [bool]$r.IsValidValue) {
+            throw ("No se ejecuto: el depurador rechazo la sentencia. Mensaje: " + (Limit-Text ([string]$r.Value) 300) + " (no se admiten declaraciones de variables ni variables del depurador como `$x; usa asignaciones a campos u objetos vivos, o una sola expresion).")
+        }
+        Write-Json ([pscustomobject]@{ ok = $true; executed = $Expression; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value)); verified = $true })
         return
     }
 

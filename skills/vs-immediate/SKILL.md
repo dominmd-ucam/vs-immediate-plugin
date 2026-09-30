@@ -58,7 +58,7 @@ Modifican algo (piden permiso salvo que el usuario ya lo haya pedido):
 
 | Script | Para que |
 | --- | --- |
-| `vs-eval.ps1 -Expression "<sentencia>" -Execute` | Ejecuta una sentencia (asignaciones, llamadas). Cambia el estado de la aplicacion. |
+| `vs-eval.ps1 -Expression "<sentencia>" -Execute` | Ejecuta una asignacion o llamada void como expresion con efectos y comprueba el resultado (falla con error si el depurador la rechaza). No admite declaraciones (`int x = 1`) ni variables del depurador (`$x`), que no persisten entre llamadas. Cambia el estado de la aplicacion. |
 | `vs-threads.ps1 -Action Switch -ThreadId n` | Cambia el hilo actual del depurador. |
 | `vs-exceptions.ps1 -Action Break\|NoBreak -Type <T>` | Activa o desactiva "parar al lanzarse" para un tipo de excepcion (experimental). |
 | `vs-watch.ps1 -Expressions "a,,b" -Iterations 5` | Instantaneas de varias expresiones a lo largo de varias pausas (continua la ejecucion). |
