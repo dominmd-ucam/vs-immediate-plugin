@@ -62,7 +62,8 @@ switch ($name) {
         if ($cmd -notmatch '-Action\s+"?(Break|NoBreak)\b') { Approve 'vs-immediate: excepciones (solo lectura)' }
     }
     'vs-eval' {
-        if ($cmd -notmatch '-Execute\b' -and (Test-SimpleExpression $cmd)) { Approve 'vs-immediate: evaluacion de expresion simple (sin llamadas ni asignaciones)' }
+        # Con -ExpressionFile el contenido esta en un fichero que el hook no ve: no se aprueba solo.
+        if ($cmd -notmatch '-Execute\b' -and $cmd -notmatch '-ExpressionFile\b' -and (Test-SimpleExpression $cmd)) { Approve 'vs-immediate: evaluacion de expresion simple (sin llamadas ni asignaciones)' }
     }
     'vs-types' {
         if (Test-SimpleExpression $cmd) { Approve 'vs-immediate: tipos declarados y reales (solo lectura)' }
