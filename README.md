@@ -86,3 +86,26 @@ Tambien puedes probar un script a mano:
 ## Desarrollo
 
     git clone https://github.com/dominmd-ucam/vs-immediate-plugin
+
+## Codex (Windows nativo)
+
+Las mismas skills y scripts sirven para Codex. Se instalan como skills sueltas en `~/.agents/skills`, que es lo que leen el CLI, la app de escritorio y la extension de IDE (la extension de IDE no soporta plugins, por eso no se usa el plugin como via principal).
+
+```
+git clone https://github.com/dominmd-ucam/vs-immediate-plugin
+cd vs-immediate-plugin
+.\install\install-codex.ps1
+```
+
+Para actualizar: `git pull` y volver a ejecutar `.\install\install-codex.ps1`. Para quitarlo: `.\install\install-codex.ps1 -Uninstall`. Reinicia Codex despues.
+
+El instalador tambien genera `~/.codex/rules/vs-immediate.rules`. Los scripts tienen que ejecutarse fuera del sandbox de Codex (el sandbox usa otro usuario y no ve tu Visual Studio por COM). Con las reglas, `vs-state`, `vs-list` y `vs-history` se ejecutan sin preguntar y el resto pide aprobacion. Las reglas de Codex solo miran el principio del comando, no el contenido de la expresion, asi que `vs-eval` siempre pide aprobacion en Codex.
+
+Tambien hay un plugin de Codex (`plugin.json` y `.agents/plugins/marketplace.json`), opcional: `codex plugin marketplace add dominmd-ucam/vs-immediate-plugin`.
+
+### Comprobacion en Codex (primera vez)
+
+1. Abre Visual Studio con una solucion, en modo depuracion y en pausa.
+2. En Codex: "usa vs-immediate: lista las instancias de Visual Studio" (debe encontrar tu VS sin pedir permiso).
+3. "Evalua `1+1` con vs-eval" (pedira aprobacion).
+4. Si no encuentra Visual Studio, el sandbox esta bloqueando COM: comprueba que las reglas se han cargado y que el comando se ejecuta fuera del sandbox.

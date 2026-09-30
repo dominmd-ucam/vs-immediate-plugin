@@ -5,7 +5,7 @@ description: Evalua expresiones y controla el depurador de Visual Studio (Window
 
 # vs-immediate
 
-Puente entre Claude Code y una instancia de Visual Studio en ejecucion, usando la automatizacion COM (EnvDTE). Equivale a lo que el usuario haria en la Ventana Inmediato, pero el resultado vuelve aqui.
+Puente entre el agente (Claude Code o Codex) y una instancia de Visual Studio en ejecucion, usando la automatizacion COM (EnvDTE). Equivale a lo que el usuario haria en la Ventana Inmediato, pero el resultado vuelve aqui.
 
 Solo Windows. Se ejecuta siempre con Windows PowerShell 5.1 (`powershell.exe`), no con `pwsh`.
 
@@ -21,7 +21,7 @@ No la uses si no hay Visual Studio abierto con la solucion, o si el problema se 
 
 ## Como invocar los scripts
 
-Los scripts estan en la carpeta `scripts/` junto a este fichero (usa el "base directory" que indica Claude Code al cargar la skill). Plantilla:
+Los scripts estan en la carpeta `scripts/` junto a este fichero (usa la carpeta donde esta este SKILL.md; el agente indica su ruta al cargar la skill). Plantilla:
 
 ```
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<base>\scripts\vs-eval.ps1" -Expression "miVariable.Count"
