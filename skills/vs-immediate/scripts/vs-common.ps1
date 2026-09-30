@@ -111,7 +111,9 @@ function Get-EvalContext {
 function Convert-QuoteEscapes {
     param([string]$Text)
     if ($null -eq $Text) { return $Text }
-    return $Text.Replace("''", '"')
+    # ~q~ es el marcador preferido: no cambia con las comillas exteriores (en PowerShell, dentro de comillas simples,
+    # '' se convierte en una sola comilla simple y ya no llega como par). '' se admite tambien.
+    return $Text.Replace('~q~', '"').Replace("''", '"')
 }
 
 function Invoke-Main {
