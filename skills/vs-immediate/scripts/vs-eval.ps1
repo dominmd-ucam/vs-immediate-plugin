@@ -72,12 +72,13 @@ Invoke-Main {
     $r = Invoke-Com { $dbg.GetExpression($Expression, $false, $TimeoutMs) }
     $valid = [bool]$r.IsValidValue
     $out = [ordered]@{
-        ok         = $true
+        ok         = $valid
         expression = $Expression
         valid      = $valid
         type       = [string]$r.Type
         value      = Limit-Text ([string]$r.Value)
     }
+    if (-not $valid) { $out.error = 'La expresion no se pudo evaluar: ' + (Limit-Text ([string]$r.Value) 300) }
     if (-not $valid) { $out.note = 'La expresion no es valida en este contexto; "value" contiene el mensaje del depurador.' }
 
     if ($Members -and $valid) {

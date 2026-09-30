@@ -15,6 +15,7 @@ param(
     [ValidateSet('Error', 'Warning', 'All')]
     [string]$Level = 'Error',
     [string]$Filter = '',
+    [switch]$SyncCaret,    # con -What Status: sincroniza el caret con la sentencia actual antes de leer la linea
     [string]$Solution,
     [int]$ProcessId = 0
 )
@@ -55,11 +56,8 @@ Invoke-Main {
                 if ($frame) {
                     $res.frame = [pscustomobject]@{ function = [string]$frame.FunctionName; module = [string]$frame.Module; language = [string]$frame.Language }
                 }
-                $doc = Try-Get { $vs.Dte.ActiveDocument }
-                if ($doc) {
-                    # Aproximado: el documento activo suele ser el codigo fuente en la linea actual.
-                    $res.sourcePosition = [pscustomobject]@{ file = [string]$doc.FullName; line = [int]$doc.Selection.CurrentLine }
-                }
+                $sp = Get-SourcePosition $vs ([bool]$SyncCaret)
+                if ($sp) { $res.sourcePosition = $sp }
             }
             Write-Json ([pscustomobject]$res)
         }
@@ -106,7 +104,13 @@ Invoke-Main {
                 $names += [string]$x.Name
                 if ($x.Name -eq $Pane) { $p = $x }
             }
-            if (-not $p) { throw ("No existe el panel '$Pane'. Paneles disponibles: " + ($names -join ', ')) }
+            if (-not $p) {
+                # Los paneles integrados a veces no aparecen al enumerar: se prueba por nombre y por GUID (independiente del idioma).
+                $guids = @{ 'debug' = '{FC076020-078A-11D1-A7DF-00A0C9110051}'; 'depurar' = '{FC076020-078A-11D1-A7DF-00A0C9110051}'; 'depuracion' = '{FC076020-078A-11D1-A7DF-00A0C9110051}'; 'build' = '{1BD8A850-02D1-11D1-BEE7-00A0C913D1F8}'; 'compilar' = '{1BD8A850-02D1-11D1-BEE7-00A0C913D1F8}' }
+                $p = Try-Get { $panes.Item($Pane) }
+                if (-not $p -and $guids.ContainsKey($Pane.ToLower())) { $p = Try-Get { $panes.Item($guids[$Pane.ToLower()]) } }
+            }
+            if (-not $p) { throw ("No se pudo abrir el panel '$Pane'. Paneles enumerados: [" + ($names -join ', ') + "]. En algunas versiones de VS el panel de depuracion no es accesible por DTE; mira la ventana Output de VS.") }
             $doc = $p.TextDocument
             $text = $doc.StartPoint.CreateEditPoint().GetText($doc.EndPoint)
             $lines = @($text -split "\r?\n")

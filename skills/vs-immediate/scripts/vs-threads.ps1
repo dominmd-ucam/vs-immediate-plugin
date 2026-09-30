@@ -62,10 +62,17 @@ Invoke-Main {
             if ($ThreadId -le 0) { throw 'Falta -ThreadId.' }
             $t = Find-Thread $dbg $ThreadId
             $dbg.CurrentThread = $t
-            $frame = Try-Get { $dbg.CurrentStackFrame }
             $fn = $null
+            $frame = Try-Get { $dbg.CurrentStackFrame }
             if ($frame) { $fn = [string]$frame.FunctionName }
-            Write-Json ([pscustomobject]@{ ok = $true; action = 'Switch'; threadId = $ThreadId; function = $fn })
+            if (-not $fn) {
+                # El frame superior puede ser nativo/sin nombre: se toma el primero con nombre de la pila del hilo.
+                foreach ($f in $t.StackFrames) {
+                    $name = [string]$f.FunctionName
+                    if ($name -and $name -notmatch '^\[') { $fn = $name; break }
+                }
+            }
+            Write-Json ([pscustomobject]@{ ok = $true; action = 'Switch'; threadId = $ThreadId; function = $fn; currentThreadId = [int](Try-Get { $dbg.CurrentThread.ID }) })
         }
     }
 }

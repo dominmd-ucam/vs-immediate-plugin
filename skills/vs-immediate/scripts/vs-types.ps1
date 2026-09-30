@@ -27,7 +27,8 @@ function ConvertTo-TypeItem {
     return [pscustomobject]@{
         name         = [string]$Name
         declaredType = $p[0]
-        runtimeType  = $p[1]
+        runtimeType  = $(if ($p[1]) { $p[1] } else { $p[0] })
+        sameAsDeclared = (-not $p[1])
         isNull       = ([string]$Value -eq 'null')
         value        = Limit-Text ([string]$Value) 200
     }

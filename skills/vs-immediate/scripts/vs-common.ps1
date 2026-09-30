@@ -186,6 +186,20 @@ function Wait-Mode {
     return [int](Invoke-Com { $Dbg.CurrentMode })
 }
 
+# Posicion en el codigo fuente. DTE no expone la linea de la flecha amarilla: se lee el caret del editor,
+# que puede no coincidir si el usuario ha movido el cursor. Con -Sync se ejecuta antes Debug.ShowNextStatement
+# (mueve el caret a la sentencia actual, como Alt+Num*).
+function Get-SourcePosition {
+    param($Vs, [bool]$Sync = $false)
+    if ($Sync) { Try-Get { $Vs.Dte.ExecuteCommand('Debug.ShowNextStatement') } | Out-Null }
+    $doc = Try-Get { $Vs.Dte.ActiveDocument }
+    if (-not $doc) { return $null }
+    $pos = [ordered]@{ file = [string]$doc.FullName; line = [int]$doc.Selection.CurrentLine }
+    if ($Sync) { $pos.lineSource = 'sentencia actual (Debug.ShowNextStatement)' }
+    else { $pos.lineSource = 'caret del editor: puede no coincidir con la flecha amarilla; usa -SyncCaret en vs-state para sincronizarlo' }
+    return [pscustomobject]$pos
+}
+
 function Get-Brief {
     param($Vs, [string]$Action, [bool]$TimedOut = $false)
     $dbg = $Vs.Dte.Debugger
@@ -195,8 +209,8 @@ function Get-Brief {
     if ($mode -eq 2) {
         $frame = Try-Get { $dbg.CurrentStackFrame }
         if ($frame) { $res.function = [string]$frame.FunctionName }
-        $doc = Try-Get { $Vs.Dte.ActiveDocument }
-        if ($doc) { $res.sourcePosition = [pscustomobject]@{ file = [string]$doc.FullName; line = [int]$doc.Selection.CurrentLine } }
+        $sp = Get-SourcePosition $Vs $false
+        if ($sp) { $res.sourcePosition = $sp }
     }
     return [pscustomobject]$res
 }

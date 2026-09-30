@@ -93,7 +93,9 @@ Opciones comunes: `-Solution <texto de la ruta>` o `-ProcessId <pid>` para elegi
 
 ## Permisos
 
-El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types`/`vs-elsa` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando, sin encadenar (`;`, `&&`, `|`) ni redirigir (`>`).
+El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types`/`vs-elsa` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando de una sola linea, sin encadenar (`;`, `&&`, `|`), sin redirigir (`>`), sin saltos de linea y sin asignar variables de PowerShell (`$v = ...`) ni usar `$(...)`: si se compone un script con varias sentencias, el hook no aplica y todo pedira permiso. Un comando por llamada.
+
+La linea de `sourcePosition` sale del cursor del editor, no de la flecha amarilla: si importa la linea exacta, usa `vs-state.ps1 -What Status -SyncCaret`.
 
 ## Problemas frecuentes
 
