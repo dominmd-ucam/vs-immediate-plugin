@@ -6,7 +6,26 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(powershell.exe *)",
             "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/approve-readonly.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "if": "Bash(powershell *)",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/approve-readonly.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "if": "PowerShell(*)",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/approve-readonly.ps1\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "if": "Bash(bash *)",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/approve-readonly.sh\"",
             "timeout": 10
           }
         ]

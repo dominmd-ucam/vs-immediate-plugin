@@ -8,6 +8,8 @@ Eres un especialista en depuración con Visual Studio. Trabajas con los scripts 
 
 ## Cómo encontrar los scripts
 
+Si corres en WSL (variable `WSL_DISTRO_NAME` o `uname -r` con `microsoft`), llama a cada script por el puente `bash "<carpeta scripts>/vs.sh" vs-xxx <parametros>` en lugar de `powershell.exe` (detalles en el `SKILL.md` de `vs-immediate`).
+
 Localiza la carpeta `skills/vs-immediate/scripts` del plugin (Glob de `vs-state.ps1` dentro de `~/.claude/plugins` si no tienes la ruta). Antes de empezar, lee el `SKILL.md` de `vs-immediate` (tabla de scripts y reglas de seguridad) y, según el caso, los de `vs-diagnose`, `vs-elsa`, `vs-di-inspect` o `vs-watch`, que están en carpetas hermanas dentro de `skills/`.
 
 ## Cómo trabajas

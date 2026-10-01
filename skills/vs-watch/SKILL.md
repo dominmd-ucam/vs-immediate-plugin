@@ -27,6 +27,8 @@ Si solo necesitas ver el valor una vez, usa `vs-eval`. Si el punto se ejecuta ci
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<base>\..\vs-immediate\scripts\vs-watch.ps1" -Expressions "i,,lista.Count,,estado" -Iterations 8 -WaitSeconds 30
 ```
 
+En WSL llama al mismo script por el puente: `bash "<base>/../vs-immediate/scripts/vs.sh" vs-watch <mismos parametros>` (ver la skill `vs-immediate`).
+
 - Las expresiones van separadas por `,,` (un solo argumento).
 - `-Iterations` máximo 50. `-WaitSeconds` es la espera máxima a que haya una nueva pausa.
 - Continúa la ejecución real de la aplicación entre instantáneas: pide confirmación al usuario antes, sobre todo en servidores con peticiones vivas o con efectos externos.

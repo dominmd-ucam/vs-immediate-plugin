@@ -39,31 +39,43 @@ function Test-SimpleExpression {
     return $true
 }
 
+# PowerShell admite abreviar los nombres de parametro (-Exec, -ExpressionF, -Cl...): se detectan por prefijo.
+function Test-FlagPrefix {
+    param([string]$Text, [string]$Full, [int]$MinLen)
+    foreach ($m in [regex]::Matches($Text, '(?:^|[\s"''])-([A-Za-z]+)')) {
+        $n = $m.Groups[1].Value
+        if ($n.Length -ge $MinLen -and $Full.StartsWith($n, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
+}
+
 if ([string]::IsNullOrWhiteSpace($cmd)) { exit 0 }
 
 # Debe ser una unica llamada a powershell, sin encadenar comandos ni redirecciones.
 if ($cmd -notmatch '^\s*powershell(\.exe)?\s') { exit 0 }
 if ($cmd -match '[;&|<>`]' -or $cmd -match '\$\(' -or $cmd -match "[\r\n]") { exit 0 }
 
-# Debe ejecutar un script del propio plugin.
-if ($cmd -notmatch '-File\s+"?[^"]*vs-immediate[\\/]scripts[\\/](vs-[a-z]+)\.ps1"?(\s|$)') { exit 0 }
+# Debe tener exactamente la forma de la plantilla (sin -Command ni otras opciones antes de -File) y ejecutar un
+# script del propio plugin. La ruta sin comillas no puede llevar espacios (si no, podria colarse otro fichero).
+$tpl = '^\s*powershell(?:\.exe)?\s+-NoProfile\s+-ExecutionPolicy\s+Bypass\s+-File\s+(?:"[^"]*|[^"\s]*)vs-immediate[\\/]scripts[\\/](vs-[a-z]+)\.ps1"?(?:\s|$)'
+if ($cmd -notmatch $tpl) { exit 0 }
 $name = $Matches[1]
 
 switch ($name) {
     'vs-list' { Approve 'vs-immediate: listar instancias de Visual Studio (solo lectura)' }
     'vs-state' { Approve 'vs-immediate: consulta de estado (solo lectura)' }
     'vs-history' {
-        if ($cmd -notmatch '-Clear\b') { Approve 'vs-immediate: historial de expresiones (solo lectura)' }
+        if (-not (Test-FlagPrefix $cmd 'Clear' 1)) { Approve 'vs-immediate: historial de expresiones (solo lectura)' }
     }
     'vs-threads' {
-        if ($cmd -notmatch '-Action\s+"?Switch\b') { Approve 'vs-immediate: hilos (solo lectura)' }
+        if ($cmd -notmatch '\bSwitch\b') { Approve 'vs-immediate: hilos (solo lectura)' }
     }
     'vs-exceptions' {
-        if ($cmd -notmatch '-Action\s+"?(Break|NoBreak)\b') { Approve 'vs-immediate: excepciones (solo lectura)' }
+        if ($cmd -notmatch '\b(Break|NoBreak)\b') { Approve 'vs-immediate: excepciones (solo lectura)' }
     }
     'vs-eval' {
         # Con -ExpressionFile el contenido esta en un fichero que el hook no ve: no se aprueba solo.
-        if ($cmd -notmatch '-Execute\b' -and $cmd -notmatch '-ExpressionFile\b' -and (Test-SimpleExpression $cmd)) { Approve 'vs-immediate: evaluacion de expresion simple (sin llamadas ni asignaciones)' }
+        if (-not (Test-FlagPrefix $cmd 'Execute' 3) -and -not (Test-FlagPrefix $cmd 'ExpressionFile' 11) -and (Test-SimpleExpression $cmd)) { Approve 'vs-immediate: evaluacion de expresion simple (sin llamadas ni asignaciones)' }
     }
     'vs-types' {
         if (Test-SimpleExpression $cmd) { Approve 'vs-immediate: tipos declarados y reales (solo lectura)' }

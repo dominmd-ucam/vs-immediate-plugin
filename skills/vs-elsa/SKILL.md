@@ -17,6 +17,8 @@ Con el depurador parado dentro de una actividad (por ejemplo en `ExecuteAsync(Ac
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<base>\..\vs-immediate\scripts\vs-elsa.ps1"
 ```
 
+En WSL llama al mismo script por el puente: `bash "<base>/../vs-immediate/scripts/vs.sh" vs-elsa <mismos parametros>` (ver la skill `vs-immediate`).
+
 - Por defecto usa `context` como raíz. Si el parámetro se llama distinto: `-Root <nombre>`.
 - Devuelve, en una sola llamada: id de la actividad y de la instancia del workflow, correlación, estado y subestado, definición y versión, número de bookmarks, incidentes y contextos de actividad, y el detalle de los primeros incidentes y bookmarks.
 - La lista `unavailable` dice qué nombres no existen en tu versión. Para descubrir el nombre real: `vs-eval.ps1 -Expression "<objeto>" -Members -Depth 2` (explora dos niveles; `-Private` añade miembros no públicos).

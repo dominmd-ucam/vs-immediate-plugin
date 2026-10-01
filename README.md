@@ -2,7 +2,8 @@
 
 Plugin para Claude Code que permite evaluar expresiones y controlar el depurador
 de Visual Studio (2022 / 2026) desde la terminal, con el mismo efecto que usar
-la Ventana Inmediato. Solo Windows.
+la Ventana Inmediato. Visual Studio es solo Windows; el agente puede correr en
+Windows nativo o en WSL (Claude Code y Codex).
 
 Funciona con la automatizacion COM de Visual Studio (EnvDTE) a traves de
 scripts de Windows PowerShell 5.1. No instala nada en Visual Studio.
@@ -38,7 +39,8 @@ Comandos rapidos: `/vs-status`, `/vs-locals`, `/vs-stack`, `/vs-eval <expr>`,
 
 Agente: `vs-debugger`, para delegar investigaciones largas de depuracion.
 
-Hook de permisos: aprueba sin preguntar las consultas de solo lectura a los
+Hook de permisos (Windows: approve-readonly.ps1; WSL: approve-readonly.sh, necesita jq
+o python3): aprueba sin preguntar las consultas de solo lectura a los
 scripts (estado, locales, pila, hilos, ultima excepcion, tipos y expresiones
 simples). Todo lo que cambia algo sigue pidiendo permiso. Detalles y limites en
 `skills/vs-immediate/SKILL.md`.
@@ -58,6 +60,8 @@ simples). Todo lo que cambia algo sigue pidiendo permiso. Detalles y limites en
         vs-watch.ps1                   valores a lo largo de varias pausas
         vs-elsa.ps1                    sondeo del contexto de Elsa 3
         vs-control.ps1                 compilar, iniciar, pasos, breakpoints, tracepoints, attach
+        vs.sh                          puente para WSL: llama a cualquiera de los anteriores en Windows
+        vs-run.ps1                     lanzador que usa vs.sh (no se llama a mano)
 
 ## Primera prueba
 
@@ -75,6 +79,8 @@ Tambien puedes probar un script a mano:
 - Evaluar expresiones requiere el depurador en pausa.
 - No escribe texto en la ventana Inmediato; usa su mismo evaluador.
 - VS y la terminal deben tener el mismo nivel de permisos.
+- WSL: la ruta por interop esta probada con simulacion, no contra un Visual Studio real (ver la comprobacion en la seccion WSL).
+- Rider, VS Code y Linux/macOS sin Windows no estan soportados (no hay automatizacion COM de Visual Studio).
 - Con varias instancias de VS abiertas hay que indicar `-Solution` o `-ProcessId`.
 - Marcadas como experimentales: configuracion de excepciones (`vs-exceptions`
   List/Break/NoBreak) y tracepoints (`AddTracepoint`); dependen de partes de la
@@ -86,6 +92,51 @@ Tambien puedes probar un script a mano:
 ## Desarrollo
 
     git clone https://github.com/dominmd-ucam/vs-immediate-plugin
+
+## WSL
+
+Visual Studio corre en Windows; el agente puede correr dentro de WSL. Los scripts se ejecutan igualmente con
+`powershell.exe` de Windows, al que WSL llega por su interop, asi que ven tu Visual Studio abierto. El puente es
+`skills/vs-immediate/scripts/vs.sh`:
+
+    bash skills/vs-immediate/scripts/vs.sh vs-state -What Status
+    bash skills/vs-immediate/scripts/vs.sh vs-eval -Expression 'lista.Count'
+
+Los parametros son los mismos que en Windows. El puente copia los scripts a `%LOCALAPPDATA%\vs-immediate\scripts`
+(solo cuando cambian), pasa los argumentos codificados en base64 (las comillas, espacios y simbolos llegan
+intactos) y devuelve el JSON limpio. El historial de expresiones es el mismo que el del agente de Windows.
+
+Requisitos: interop de WSL activo (por defecto lo esta; en `/etc/wsl.conf` `[interop] enabled=true` y
+`appendWindowsPath=true`), y Visual Studio y WSL con el mismo nivel de permisos.
+
+### Comprobar el entorno
+
+    git clone https://github.com/dominmd-ucam/vs-immediate-plugin
+    cd vs-immediate-plugin
+    bash install/install-wsl.sh check
+
+Con Visual Studio abierto debe terminar con "WSL llega a Visual Studio por COM".
+
+### Claude Code en WSL
+
+Se instala como plugin desde dentro de WSL (el Claude Code de WSL usa su propio `~/.claude`, separado del de Windows):
+
+    /plugin marketplace add dominmd-ucam/vs-immediate-plugin
+    /plugin install vs-immediate@vs-immediate-plugin
+
+El hook `approve-readonly.sh` aprueba solo las consultas de solo lectura. Necesita `jq` o `python3`; sin ellos no
+aprueba nada y Claude pide permiso en cada llamada. En Windows y en WSL conviven en el mismo `hooks.json`, cada uno
+filtrado por el tipo de comando (campo `if`).
+
+### Codex en WSL
+
+    bash install/install-wsl.sh codex
+
+Copia las skills a `~/.agents/skills` y escribe `~/.codex/rules/vs-immediate.rules` (`vs-state`, `vs-list` y
+`vs-history` sin preguntar; el resto pide aprobacion; en ambos casos fuera del sandbox, que es lo que permite usar el
+interop). Para actualizar: `git pull` y volver a ejecutarlo. Para quitarlo: `bash install/install-wsl.sh codex --uninstall`.
+Reinicia Codex despues. Las reglas de Codex solo miran el principio del comando, asi que `vs-eval` siempre pide
+aprobacion en Codex.
 
 ## Codex (Windows nativo)
 

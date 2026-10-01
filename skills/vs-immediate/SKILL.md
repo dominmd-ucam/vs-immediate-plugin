@@ -1,13 +1,13 @@
 ---
 name: vs-immediate
-description: Evalua expresiones y controla el depurador de Visual Studio (Windows) desde la terminal, como la Ventana Inmediato. Usar cuando el usuario depura una solucion .NET en Visual Studio y hace falta ver valores en tiempo de ejecucion (variables, locales, pila de llamadas, excepciones, hilos, breakpoints, paso a paso, compilar) en vez de pedirle que los copie. Evaluate expressions and drive the Visual Studio debugger via DTE.
+description: Evalua expresiones y controla el depurador de Visual Studio (Windows; el agente puede correr en Windows nativo o en WSL) desde la terminal, como la Ventana Inmediato. Usar cuando el usuario depura una solucion .NET en Visual Studio y hace falta ver valores en tiempo de ejecucion (variables, locales, pila de llamadas, excepciones, hilos, breakpoints, paso a paso, compilar) en vez de pedirle que los copie. Evaluate expressions and drive the Visual Studio debugger via DTE.
 ---
 
 # vs-immediate
 
 Puente entre el agente (Claude Code o Codex) y una instancia de Visual Studio en ejecucion, usando la automatizacion COM (EnvDTE). Equivale a lo que el usuario haria en la Ventana Inmediato, pero el resultado vuelve aqui.
 
-Solo Windows. Se ejecuta siempre con Windows PowerShell 5.1 (`powershell.exe`), no con `pwsh`.
+Visual Studio es solo Windows. Los scripts se ejecutan siempre con Windows PowerShell 5.1 (`powershell.exe`), no con `pwsh`. El agente puede correr en Windows nativo o en WSL: en WSL se llama por el puente `vs.sh` (ver "Si el agente corre en WSL").
 
 Skills relacionadas del mismo plugin (flujos completos que usan estos scripts): `vs-diagnose` (investigar un fallo), `vs-elsa` (workflows y actividades de Elsa 3), `vs-di-inspect` (que implementacion hay tras una interfaz), `vs-watch` (seguir valores entre pausas), `vs-repro` (dejar un fallo reproducible).
 
@@ -28,6 +28,23 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<base>\scripts\vs-eval.
 ```
 
 Todos devuelven JSON con `"ok": true/false`. Si `ok` es false, lee `error`: casi siempre explica que hacer.
+
+Usa exactamente esta forma (con `-NoProfile -ExecutionPolicy Bypass -File` en ese orden, sin otras opciones delante): el hook de permisos solo reconoce la plantilla tal cual.
+
+### Si el agente corre en WSL
+
+Visual Studio sigue siendo el de Windows; solo cambia como se llama a los scripts. Si estas en WSL (existe la variable `WSL_DISTRO_NAME`, o `uname -r` contiene `microsoft`), llama SIEMPRE por el puente `vs.sh`; nunca con `powershell.exe` y una ruta de WSL, ni con `pwsh`:
+
+```
+bash "<base>/scripts/vs.sh" vs-state -What Status
+bash "<base>/scripts/vs.sh" vs-eval -Expression 'miVariable.Count'
+```
+
+- El primer argumento es el nombre del script sin ruta (`vs-eval`, `vs-state`...; con `.ps1` tambien vale). El resto son los mismos parametros que en Windows, y todas las tablas de abajo valen igual.
+- Misma regla de comillas (`~q~`, argumento entre comillas simples) y misma regla de una sola linea por llamada.
+- Los argumentos viajan codificados, asi que simbolos y espacios llegan intactos al script.
+- Los scripts se copian solos a `%LOCALAPPDATA%\vs-immediate\scripts` en Windows, y el historial (`vs-history`) es el mismo que usa el agente de Windows.
+- Si responde que no encuentra `powershell.exe`, el interop de WSL esta desactivado. Para diagnosticarlo, el usuario puede ejecutar `bash install/install-wsl.sh check` desde el repositorio del plugin.
 
 ### Comillas dobles en las expresiones (regla de prioridad)
 
@@ -121,11 +138,14 @@ Si el usuario pregunta que expresiones se han usado ("que has evaluado", "dame e
 
 El plugin incluye un hook que aprueba sin preguntar las llamadas de solo lectura a estos scripts: `vs-list`, `vs-state`, `vs-threads` (List/Stack), `vs-exceptions` (Last/List), y `vs-eval`/`vs-types`/`vs-elsa` cuando la expresion es simple (sin llamadas a metodos salvo `GetType()`/`ToString()`, sin asignaciones ni `++`/`--`). Todo lo demas sigue pidiendo permiso. Para que el hook pueda aprobarlo, llama al script en un unico comando de una sola linea, sin encadenar (`;`, `&&`, `|`), sin redirigir (`>`), sin saltos de linea y sin asignar variables de PowerShell (`$v = ...`) ni usar `$(...)`: si se compone un script con varias sentencias, el hook no aplica y todo pedira permiso. Un comando por llamada. Para comillas dobles en las expresiones, sigue la regla de prioridad de la seccion "Como invocar los scripts" (`~q~` primero; el fichero temporal solo como ultimo recurso, y esas llamadas siempre piden permiso porque el hook no puede ver su contenido).
 
+En WSL el hook equivalente es `hooks/approve-readonly.sh` (necesita `jq` o `python3`) y las llamadas deben tener la forma `bash "<ruta>/vs.sh" vs-xxx ...`, tambien en una sola linea. En Windows el hook solo aprueba la plantilla exacta `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "<ruta>\vs-xxx.ps1" ...`; cualquier otra forma pide permiso.
+
 La linea de `sourcePosition` sale del cursor del editor, no de la flecha amarilla: si importa la linea exacta, usa `vs-state.ps1 -What Status -SyncCaret`.
 
 ## Problemas frecuentes
 
 - "No se encuentra ninguna instancia": VS cerrado, o VS y la terminal con distintos permisos (uno como administrador y otro no).
+- En WSL, `"No se encuentra powershell.exe"`: interop desactivado en `/etc/wsl.conf` (`[interop] enabled=true`, `appendWindowsPath=true`; luego `wsl --shutdown` desde Windows). Mismo caso de permisos que arriba: WSL y Visual Studio con el mismo nivel de permisos.
 - "Hay varias instancias": usa `-Solution` o `-ProcessId`.
 - "El depurador no esta en pausa": hace falta break mode para evaluar.
 - Errores de COM tipo "llamada rechazada": VS esta ocupado (compilando, cargando); el script reintenta solo, si persiste espera unos segundos.

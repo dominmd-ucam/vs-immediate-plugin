@@ -8,6 +8,12 @@ Muestra las variables locales y los argumentos del frame actual del depurador de
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/skills/vs-immediate/scripts/vs-state.ps1" -What Locals
 ```
 
+Si estás en WSL (variable `WSL_DISTRO_NAME` o `uname -r` con `microsoft`), usa en su lugar el puente:
+
+```
+bash "${CLAUDE_PLUGIN_ROOT}/skills/vs-immediate/scripts/vs.sh" vs-state -What Locals
+```
+
 Si `${CLAUDE_PLUGIN_ROOT}` aparece sin sustituir, localiza `vs-state.ps1` con Glob dentro de `~/.claude/plugins`.
 
 Preséntalos como una lista corta: nombre, tipo y valor (para interfaces, el tipo real entre llaves). Si el depurador no está en pausa, dilo y no hagas nada más. No evalúes ni cambies nada por tu cuenta.
