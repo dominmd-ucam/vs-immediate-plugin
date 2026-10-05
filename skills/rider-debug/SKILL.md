@@ -42,11 +42,21 @@ Nota de fiabilidad: el README del plugin lista Rider (puerto 29202) pero solo de
 | Codigo | `get_source_context` |
 | Evaluacion | `evaluate_expression` |
 
+Parametros principales (segun la documentacion del plugin, USAGE.md; `wait_for_pause` no tiene parametros documentados, mira su esquema en la sesion):
+
+- `session_id` es opcional en casi todas: si se omite usa la sesion actual. No lo confundas con `project_path`.
+- `project_path`: ruta absoluta de la raiz del proyecto; solo hace falta si Rider tiene varios proyectos abiertos.
+- `start_debug_session`: `configuration_name` (obligatorio, el nombre de la configuracion de ejecucion, por ejemplo `ElsaServer: http`; `list_run_configurations` los lista).
+- `set_breakpoint`: `file_path` (ruta absoluta) y `line` (desde 1) obligatorios; opcionales `condition`, `log_message` (con `{expr}`), `suspend_policy` (`all`, `thread`, `none`), `enabled`, `temporary` (se quita tras el primer acierto). Con `suspend_policy` `none` y un `log_message` se obtiene un punto de traza que no para.
+- `remove_breakpoint`: `breakpoint_id` (el que devuelve `list_breakpoints`).
+- `evaluate_expression`: `expression` obligatorio, `frame_index` opcional (0 = frame actual).
+- `get_variables`: `frame_index`; `get_stack_trace`: `max_frames`; `get_debug_session_status`: `include_variables`, `include_source_context`, `source_context_lines`, `max_stack_frames`.
+
 Equivalencias con los scripts de Visual Studio, por si el usuario ya conoce `vs-immediate`: `vs-state Status` = `get_debug_session_status`; `Locals` = `get_variables`; `Stack` = `get_stack_trace`; `Breakpoints` = `list_breakpoints`; `vs-eval` = `evaluate_expression`; `vs-threads` = `list_threads`; `vs-control` Continue/Step/AddBreakpoint/Start/Stop = `resume_execution`/`step_*`/`set_breakpoint`/`start_debug_session`/`stop_debug_session`. No hay equivalente de `vs-history`, `vs-trace`, `vs-types` ni de la ultima excepcion; usa `evaluate_expression` con lo que haga falta.
 
 ## Como trabajar en cada depuracion
 
-- Si Rider tiene varias soluciones abiertas, pasa siempre `project_path` (con barras `/`, por ejemplo `C:/ruta/MiSolucion`). Si solo hay una, no hace falta.
+- Si Rider tiene varias soluciones abiertas, pasa `project_path` en todas las llamadas (ruta absoluta de la raiz, con barras `/`, por ejemplo `C:/ruta/MiSolucion`). Si solo hay una, no hace falta.
 - Antes de empezar, lee el codigo y propon los breakpoints: archivo:linea y que consultaras en cada uno. Si el usuario no ha pedido que actues sin preguntar, espera su visto bueno antes de poner nada.
 - Orden habitual: comprobar conexion (`list_debug_sessions`) > `set_breakpoint` (guarda los IDs) > `start_debug_session` o `execute_run_configuration` > el usuario dispara el caso (peticion, workflow, boton) > `wait_for_pause` (si admite filtrar por breakpoints, filtra por los IDs que pusiste tu; mira el esquema de la herramienta) > `get_debug_session_status` y, para datos concretos, `evaluate_expression` > `step_*` o `resume_execution`.
 - Pocos breakpoints y bien elegidos; condicionales si el punto se repite. Cada dato debe confirmar o descartar una hipotesis.

@@ -1,5 +1,6 @@
 {
   "name": "vs-immediate-plugin",
+  "description": "Plugin vs-immediate: evalua expresiones y controla el depurador de Visual Studio (Windows y WSL) desde Claude Code, y depura en Rider por MCP.",
   "owner": {
     "name": "Domingo"
   },
@@ -8,7 +9,7 @@
       "name": "vs-immediate",
       "source": "./",
       "description": "Evalua expresiones y controla el depurador de Visual Studio desde Claude Code (Windows y WSL); Rider por MCP.",
-      "version": "0.7.0"
+      "version": "0.7.1"
     }
   ]
 }

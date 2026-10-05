@@ -8,4 +8,6 @@ Comprueba si Claude Code puede controlar el depurador de JetBrains Rider por MCP
 2. Si están, llama a `list_debug_sessions` (con `project_path` si Rider tiene varias soluciones abiertas). Si hay una sesión activa, `get_debug_session_status` y resume: estado (en ejecución o parada), archivo y línea actuales, y las primeras variables relevantes.
 3. Si no hay sesión, di que Rider está conectado y sin depuración en marcha, y ofrece listar los breakpoints (`list_breakpoints`).
 
+Los parámetros `session_id` y `project_path` son distintos: `session_id` es opcional (si se omite se usa la sesión actual) y `project_path` es la ruta de la solución, solo necesaria con varias abiertas; no pases un id de sesión como `project_path`. Esto es Rider: no sugieras comandos `/vs-*` (son de Visual Studio) ni scripts de `vs-immediate`.
+
 No cambies nada: no pongas breakpoints, no avances ni evalúes expresiones con efectos. Para trabajar de verdad sigue la skill `rider-debug`.
