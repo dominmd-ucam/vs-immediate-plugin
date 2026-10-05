@@ -17,7 +17,7 @@ Skills relacionadas del mismo plugin (flujos completos que usan estos scripts): 
 - Necesitas ver la pila de llamadas, los locales, la ultima excepcion, los hilos, los breakpoints o la salida de depuracion.
 - Quieres poner un breakpoint, lanzar la depuracion, avanzar paso a paso o compilar sin pedirselo al usuario.
 
-No la uses si no hay Visual Studio abierto con la solucion, o si el problema se resuelve leyendo el codigo.
+No la uses si no hay Visual Studio abierto con la solucion, o si el problema se resuelve leyendo el codigo. Si el usuario depura en JetBrains Rider (no en Visual Studio), no es esta skill: usa `rider-debug`.
 
 ## Como invocar los scripts
 

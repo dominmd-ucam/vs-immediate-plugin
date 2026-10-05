@@ -33,9 +33,10 @@ Skills (Claude las usa solo cuando encajan con lo que pides):
 - vs-di-inspect: que implementacion real hay tras cada interfaz inyectada
 - vs-watch: seguir valores a lo largo de varias pausas
 - vs-repro: dejar un fallo como receta repetible
+- rider-debug: depurar en JetBrains Rider por MCP (plugin Debugger MCP Server), no en Visual Studio
 
 Comandos rapidos: `/vs-status`, `/vs-locals`, `/vs-stack`, `/vs-eval <expr>`,
-`/vs-exception`, `/vs-threads`, `/vs-breakpoints`, `/vs-elsa`.
+`/vs-exception`, `/vs-threads`, `/vs-breakpoints`, `/vs-elsa`, `/vs-history`, `/rider-debug`.
 
 Agente: `vs-debugger`, para delegar investigaciones largas de depuracion.
 
@@ -80,7 +81,7 @@ Tambien puedes probar un script a mano:
 - No escribe texto en la ventana Inmediato; usa su mismo evaluador.
 - VS y la terminal deben tener el mismo nivel de permisos.
 - WSL: la ruta por interop esta probada con simulacion, no contra un Visual Studio real (ver la comprobacion en la seccion WSL).
-- Rider, VS Code y Linux/macOS sin Windows no estan soportados (no hay automatizacion COM de Visual Studio).
+- Rider se cubre con la skill `rider-debug` (MCP de JetBrains), no con los scripts: Rider no tiene la automatizacion COM de Visual Studio. VS Code y Linux/macOS sin Windows no estan soportados.
 - Con varias instancias de VS abiertas hay que indicar `-Solution` o `-ProcessId`.
 - Marcadas como experimentales: configuracion de excepciones (`vs-exceptions`
   List/Break/NoBreak) y tracepoints (`AddTracepoint`); dependen de partes de la
@@ -92,6 +93,52 @@ Tambien puedes probar un script a mano:
 ## Desarrollo
 
     git clone https://github.com/dominmd-ucam/vs-immediate-plugin
+
+## Rider
+
+Rider no tiene la automatizacion COM de Visual Studio, asi que los scripts `vs-*` no sirven. Para Rider el plugin
+incluye la skill `rider-debug`, que trabaja con el plugin de JetBrains **Debugger MCP Server**
+(plugins.jetbrains.com/plugin/29233): expone el depurador de Rider como herramientas MCP (breakpoints, pausas,
+variables, pila, evaluacion, paso a paso) y Claude las usa con el mismo estilo de trabajo que con Visual Studio.
+
+Preparacion, una sola vez por equipo (el detalle y los porques estan en `skills/rider-debug/SKILL.md`):
+
+- [ ] En Rider: instalar el plugin Debugger MCP Server y reiniciar (JetBrains IDE 2025.2 o posterior)
+- [ ] Settings > Tools > Debugger MCP Server: puerto 29202 en Rider; safety mode Unrestricted si hay que llamar metodos al evaluar
+- [ ] Settings > Build, Execution, Deployment > Debugger: marcar "Allow property evaluations and other implicit function calls" y Evaluation timeout = 5000 ms
+- [ ] Registrar el servidor en Claude Code y abrir una sesion nueva:
+
+      claude mcp add --transport http rider-debugger http://127.0.0.1:29202/debugger-mcp/streamable-http --scope user
+      claude mcp get rider-debugger
+
+Comprobacion: `/rider-debug` (con Rider abierto) lista las sesiones de depuracion y dice si esta conectado.
+
+El servidor MCP no se instala con el plugin a proposito: apunta a un Rider local, y registrarlo para todos los
+usuarios del plugin solo daria errores de conexion a quien no use Rider.
+
+Permisos opcionales: para que Claude no pida permiso en cada consulta de solo lectura, anade a
+`~/.claude/settings.json` (usuario) algo como esto, y deja sin aprobar `evaluate_expression`, `set_variable`, los
+pasos, `resume_execution` y los breakpoints:
+
+    {
+      "permissions": {
+        "allow": [
+          "mcp__rider-debugger__list_debug_sessions",
+          "mcp__rider-debugger__get_debug_session_status",
+          "mcp__rider-debugger__list_breakpoints",
+          "mcp__rider-debugger__get_variables",
+          "mcp__rider-debugger__get_stack_trace",
+          "mcp__rider-debugger__get_source_context",
+          "mcp__rider-debugger__list_threads",
+          "mcp__rider-debugger__list_run_configurations"
+        ]
+      }
+    }
+
+Estado: el README del plugin de JetBrains lista Rider pero solo declara pruebas automaticas en IntelliJ IDEA,
+PyCharm, WebStorm y GoLand. La skill recoge ajustes sacados de uso real con .NET en Rider; no se ha probado aqui
+contra un Rider real. En Codex, el registro de un servidor MCP HTTP no esta verificado: la skill se instala con
+`install-codex`, pero el servidor habria que anadirlo con el mecanismo de MCP de Codex.
 
 ## WSL
 
