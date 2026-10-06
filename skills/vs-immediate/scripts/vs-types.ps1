@@ -9,6 +9,8 @@ param(
     [switch]$This,
     [string]$Filter = '',
     [int]$Top = 40,
+    [ValidateRange(0, 500)]
+    [int]$Frame = 0,       # evalua en el frame n de la pila (numeracion de vs-state -What Stack: 1 = superior); 0 = el seleccionado
     [string]$Solution,
     [int]$ProcessId = 0
 )
@@ -61,7 +63,9 @@ Invoke-Main {
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
     Assert-BreakMode $vs
     $dbg = $vs.Dte.Debugger
+    Enter-Frame $dbg $Frame
     $out = [ordered]@{ ok = $true }
+    if ($Frame -gt 0) { $out.frame = $Frame }
 
     if ($This) {
         $r = Invoke-Com { $dbg.GetExpression('this', $false, 5000) }

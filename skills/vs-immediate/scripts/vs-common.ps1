@@ -122,9 +122,57 @@ function Invoke-Main {
         & $Body
     }
     catch {
+        Restore-Frame
         Write-Json ([pscustomobject]@{ ok = $false; error = $_.Exception.Message })
         exit 1
     }
+    finally {
+        Restore-Frame
+    }
+}
+
+# --- Frame de la pila ----------------------------------------------------------------------------------------
+# -Frame n: evalua en el frame n de la pila del hilo actual, con la misma numeracion que "vs-state -What Stack"
+# (1 = frame superior, 2 = quien lo llamo...; 0 = no cambiar el frame seleccionado). El cambio es temporal:
+# Invoke-Main restaura siempre el frame que estaba seleccionado en Visual Studio, tambien si algo falla.
+$script:FrameRestore = $null
+
+function Enter-Frame {
+    param($FrameDbg, [int]$FrameIndex)
+    if ($FrameIndex -le 0) { return }
+    $thread = Invoke-Com { $FrameDbg.CurrentThread }
+    $target = $null
+    $n = 0
+    foreach ($f in $thread.StackFrames) {
+        $n++
+        if ($n -eq $FrameIndex) { $target = $f; break }
+    }
+    if (-not $target) {
+        $total = Try-Get { [int]$thread.StackFrames.Count }
+        $extra = ''
+        if ($total) { $extra = " (tiene $total frames)" }
+        throw ("No existe el frame $FrameIndex en la pila del hilo actual$extra. Usa vs-state -What Stack para ver los indices (1 = frame superior).")
+    }
+    $prev = Try-Get { $FrameDbg.CurrentStackFrame }
+    $script:FrameRestore = @{ Dbg = $FrameDbg; Frame = $prev }
+    Invoke-Com { $FrameDbg.CurrentStackFrame = $target } | Out-Null
+    # Comprueba que el cambio se aplico: si Visual Studio lo ignorase, se evaluaria en el frame equivocado sin avisar.
+    $cur = Try-Get { $FrameDbg.CurrentStackFrame }
+    if (-not $cur -or [string]$cur.FunctionName -ne [string]$target.FunctionName) {
+        throw ("Visual Studio no cambio al frame $FrameIndex (" + [string]$target.FunctionName + "); no se evalua para no dar un valor del frame equivocado.")
+    }
+}
+
+function Restore-Frame {
+    $s = $script:FrameRestore
+    if (-not $s) { return }
+    $script:FrameRestore = $null
+    if (-not $s.Frame) {
+        [Console]::Error.WriteLine('vs-immediate: no se conocia el frame seleccionado originalmente, asi que no se pudo restaurar; selecciona el frame en la ventana Pila de llamadas si hace falta.')
+        return
+    }
+    try { $s.Dbg.CurrentStackFrame = $s.Frame }
+    catch { [Console]::Error.WriteLine('vs-immediate: no se pudo restaurar el frame seleccionado en Visual Studio (' + $_.Exception.Message + '); seleccionalo a mano en la ventana Pila de llamadas.') }
 }
 
 # Reintenta cuando VS esta ocupado (RPC_E_CALL_REJECTED / RPC_E_SERVERCALL_RETRYLATER).

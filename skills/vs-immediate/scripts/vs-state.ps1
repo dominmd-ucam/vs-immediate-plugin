@@ -15,6 +15,8 @@ param(
     [ValidateSet('Error', 'Warning', 'All')]
     [string]$Level = 'Error',
     [string]$Filter = '',
+    [ValidateRange(0, 500)]
+    [int]$Frame = 0,       # con -What Locals: locales del frame n de la pila (numeracion de vs-state -What Stack: 1 = superior); 0 = el seleccionado
     [switch]$SyncCaret,    # con -What Status: sincroniza el caret con la sentencia actual antes de leer la linea
     [string]$Solution,
     [int]$ProcessId = 0
@@ -52,9 +54,9 @@ Invoke-Main {
                 if ($proc) { $res.debuggee = [pscustomobject]@{ name = [string]$proc.Name; processId = [int]$proc.ProcessID } }
             }
             if ($mode -eq 2) {
-                $frame = Try-Get { $dbg.CurrentStackFrame }
-                if ($frame) {
-                    $res.frame = [pscustomobject]@{ function = [string]$frame.FunctionName; module = [string]$frame.Module; language = [string]$frame.Language }
+                $curFrame = Try-Get { $dbg.CurrentStackFrame }
+                if ($curFrame) {
+                    $res.frame = [pscustomobject]@{ function = [string]$curFrame.FunctionName; module = [string]$curFrame.Module; language = [string]$curFrame.Language }
                 }
                 $sp = Get-SourcePosition $vs ([bool]$SyncCaret)
                 if ($sp) { $res.sourcePosition = $sp }
@@ -63,10 +65,15 @@ Invoke-Main {
         }
         'Locals' {
             Assert-BreakMode $vs
-            $frame = Invoke-Com { $dbg.CurrentStackFrame }
-            $locals = ConvertTo-ExprItems $frame.Locals $Top
-            $frameArgs = ConvertTo-ExprItems $frame.Arguments $Top
-            Write-Json ([pscustomobject]@{ ok = $true; function = [string]$frame.FunctionName; arguments = $frameArgs; locals = $locals })
+            Enter-Frame $dbg $Frame
+            $curFrame = Invoke-Com { $dbg.CurrentStackFrame }
+            $locals = @(ConvertTo-ExprItems $curFrame.Locals $Top)
+            $frameArgs = @(ConvertTo-ExprItems $curFrame.Arguments $Top)
+            $res = [ordered]@{ ok = $true; function = [string]$curFrame.FunctionName }
+            if ($Frame -gt 0) { $res.frame = $Frame }
+            $res.arguments = $frameArgs
+            $res.locals = $locals
+            Write-Json ([pscustomobject]$res)
         }
         'Stack' {
             Assert-BreakMode $vs

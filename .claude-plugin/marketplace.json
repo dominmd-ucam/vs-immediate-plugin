@@ -9,7 +9,7 @@
       "name": "vs-immediate",
       "source": "./",
       "description": "Evalua expresiones y controla el depurador de Visual Studio desde Claude Code (Windows y WSL); Rider por MCP.",
-      "version": "0.7.1"
+      "version": "0.8.0"
     }
   ]
 }

@@ -43,8 +43,12 @@ Agente: `vs-debugger`, para delegar investigaciones largas de depuracion.
 Hook de permisos (Windows: approve-readonly.ps1; WSL: approve-readonly.sh, necesita jq
 o python3): aprueba sin preguntar las consultas de solo lectura a los
 scripts (estado, locales, pila, hilos, ultima excepcion, tipos y expresiones
-simples). Todo lo que cambia algo sigue pidiendo permiso. Detalles y limites en
+de solo lectura, incluidas llamadas LINQ y de cadenas seguras como Where, Count,
+Any, Select o ToList). Todo lo que cambia algo sigue pidiendo permiso. Detalles y limites en
 `skills/vs-immediate/SKILL.md`.
+
+Opcion `-Frame <n>` en vs-eval, vs-types, vs-elsa y `vs-state -What Locals`: evalua en
+otro frame de la pila (indices de `vs-state -What Stack`) y restaura el frame al acabar.
 
 ## Scripts
 

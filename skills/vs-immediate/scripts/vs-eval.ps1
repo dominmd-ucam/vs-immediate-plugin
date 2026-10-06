@@ -5,6 +5,7 @@
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File vs-eval.ps1 -Expression "pedido.Lineas.Count"
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File vs-eval.ps1 -Expression "cliente" -Members
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File vs-eval.ps1 -Expression 'lista.Where(p => p.Id == ~q~648000~q~).Count()'   (~q~ = comilla doble)
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File vs-eval.ps1 -Expression "context.Id" -Frame 2   (evalua en el frame 2 de la pila; ver vs-state -What Stack)
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File vs-eval.ps1 -ExpressionFile expr.txt   (ultimo recurso)
 param(
     [string]$Expression,
@@ -15,6 +16,8 @@ param(
     [int]$Depth = 1,       # con -Members: niveles a explorar (1 = solo primer nivel; maximo 3)
     [switch]$Private,      # con -Members: incluye tambien los miembros no publicos
     [int]$TimeoutMs = 5000,
+    [ValidateRange(0, 500)]
+    [int]$Frame = 0,       # evalua en el frame n de la pila (numeracion de vs-state -What Stack: 1 = superior); 0 = el seleccionado
     [string]$Solution,
     [int]$ProcessId = 0
 )
@@ -61,6 +64,7 @@ Invoke-Main {
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
     Assert-BreakMode $vs
     $dbg = $vs.Dte.Debugger
+    Enter-Frame $dbg $Frame
 
     if ($Execute) {
         # ExecuteStatement no informa de errores (devuelve sin excepcion aunque no haya hecho nada),
@@ -70,7 +74,9 @@ Invoke-Main {
             throw ("No se ejecuto: el depurador rechazo la sentencia. Mensaje: " + (Limit-Text ([string]$r.Value) 300) + " (no se admiten declaraciones de variables ni variables del depurador como `$x; usa asignaciones a campos u objetos vivos, o una sola expresion).")
         }
         Write-History 'execute' $Expression $true ([string]$r.Value)
-        Write-Json ([pscustomobject]@{ ok = $true; executed = $Expression; paste = $Expression; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value)); verified = $true; context = (Get-EvalContext $dbg) })
+        $res = [ordered]@{ ok = $true; executed = $Expression; paste = $Expression; type = [string]$r.Type; value = (Limit-Text ([string]$r.Value)); verified = $true; context = (Get-EvalContext $dbg) }
+        if ($Frame -gt 0) { $res.frame = $Frame }
+        Write-Json ([pscustomobject]$res)
         return
     }
 
@@ -86,6 +92,7 @@ Invoke-Main {
         type       = [string]$r.Type
         value      = Limit-Text ([string]$r.Value)
     }
+    if ($Frame -gt 0) { $out.frame = $Frame }
     if ($ExpressionFile) { $out.tip = 'El fichero es el ultimo recurso. Primera opcion siempre: -Expression con ~q~ en lugar de CADA comilla doble (p.ej. StartsWith(~q~648000~q~)), sin ninguna comilla doble real dentro, y el argumento entre comillas simples.' }
     if (-not $valid -and $Expression -match "'") { $out.hint = 'La expresion lleva comillas simples: si querias comillas dobles de C#, escribe ~q~ en su lugar (p.ej. StartsWith(~q~648000~q~)); las comillas se pierden o cambian al pasar por la linea de comandos.' }
     if (-not $valid) { $out.error = 'La expresion no se pudo evaluar: ' + (Limit-Text ([string]$r.Value) 300) }

@@ -12,6 +12,8 @@ param(
     [ValidateSet('Auto', 'Activity', 'Workflow')]
     [string]$Kind = 'Auto',
     [string]$Extra = '',
+    [ValidateRange(0, 500)]
+    [int]$Frame = 0,       # evalua en el frame n de la pila (numeracion de vs-state -What Stack: 1 = superior); 0 = el seleccionado
     [string]$Solution,
     [int]$ProcessId = 0
 )
@@ -60,6 +62,7 @@ Invoke-Main {
     $vs = Get-Vs -Solution $Solution -ProcessId $ProcessId
     Assert-BreakMode $vs
     $dbg = $vs.Dte.Debugger
+    Enter-Frame $dbg $Frame
 
     $r = Try-Get { $dbg.GetExpression($Root, $false, 3000) }
     if (-not $r -or -not $r.IsValidValue) {
@@ -138,6 +141,7 @@ Invoke-Main {
         unavailable = $missing
         hint        = 'Lo que aparece en "unavailable" no existe con ese nombre en tu version o no es accesible desde este punto. Para descubrir los nombres reales: vs-eval.ps1 -Expression <objeto> -Members -Depth 2.'
     }
+    if ($Frame -gt 0) { $res.frame = $Frame }
     if ($extraValues.Count -gt 0) { $res.extra = [pscustomobject]$extraValues }
     Write-Json ([pscustomobject]$res)
 }
